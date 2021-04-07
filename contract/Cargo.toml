@@ -1,0 +1,22 @@
+[package]
+name = "casper-validator-info-contract"
+version = "0.1.0"
+authors = ["Oleg Kovalov <oleg@make.services>"]
+edition = "2021"
+
+[dependencies]
+contract = { package = "casper-contract", version="1.0.0" }
+types = { package = "casper-types", version="1.0.0" }
+casperlabs_contract_macro = { git = "https://github.com/CasperLabs/casperlabs_contract_macro", branch = "dev", package = "casperlabs-contract-macro"}
+regex = "1.4.5"
+lazy_static = "1.4.0"
+
+[[bin]]
+name = "contract"
+path = "src/main.rs"
+bench = false
+doctest = false
+test = false
+
+[features]
+default = ["contract/std", "types/std"]
