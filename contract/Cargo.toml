@@ -1,8 +1,8 @@
 [package]
-name = "casper-validator-info-contract"
+name = "contract"
 version = "0.1.0"
 authors = ["Oleg Kovalov <oleg@make.services>"]
-edition = "2021"
+edition = "2018"
 
 [dependencies]
 contract = { package = "casper-contract", version="1.0.0" }
