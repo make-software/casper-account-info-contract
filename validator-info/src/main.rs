@@ -6,4 +6,3 @@ use validator_info::deploy_validator_info_contract;
 fn call() {
     deploy_validator_info_contract(String::from("validator-info"));
 }
-
