@@ -4,7 +4,9 @@ use contract::{
     unwrap_or_revert::UnwrapOrRevert
 };
 
-use types::{CLType, CLTyped, EntryPoint, EntryPointAccess, EntryPointType, EntryPoints, Parameter, bytesrepr::{FromBytes, ToBytes}};
+use types::{
+    contracts::ContractPackageHash,
+    CLType, CLTyped, EntryPoint, EntryPointAccess, EntryPointType, EntryPoints, Parameter, bytesrepr::{FromBytes, ToBytes}, Key};
 
 #[no_mangle]
 fn setUrl() {
@@ -27,6 +29,21 @@ pub fn deploy_validator_info_contract(name: String) {
         Some(format!("{}-package-hash", name)), 
         Some(format!("{}-access-uref", name))
     );
+    runtime::put_key(&name, contract_hash.into());
+}
+
+pub fn upgrade(name: String) {
+    let mut entry_points = EntryPoints::new();
+    entry_points.add_entry_point(EntryPoint::new(
+        String::from("setUrl"),
+        vec![Parameter::new("url", CLType::String)],
+        CLType::Unit,
+        EntryPointAccess::Public,
+        EntryPointType::Contract,
+    ));
+    let package_hash: ContractPackageHash = runtime::get_key(&format!("{}-package-hash", name))
+        .unwrap().into_hash().unwrap().into();
+    let (contract_hash, _) = storage::add_contract_version(package_hash, entry_points, Default::default());
     runtime::put_key(&name, contract_hash.into());
 }
 
