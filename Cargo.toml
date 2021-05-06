@@ -1,8 +1,8 @@
 [workspace]
 
 members = [
-    "contract",
-	"tests"
+    "validator-info",
+    "tests"
 ]
 
 [profile.release]

@@ -20,3 +20,11 @@ $ make test
 ## Deploy
 
 See Casper documentation: [Deploying Contracts](https://docs.casperlabs.io/en/latest/dapp-dev-guide/deploying-contracts.html) and [Contracts on the Blockchain](https://docs.casperlabs.io/en/latest/dapp-dev-guide/calling-contracts.html).
+
+## Contract entrypoints
+
+- set_url
+- get_url
+- delete_url
+- set_url_for_validator
+- delete_url_for_validator
