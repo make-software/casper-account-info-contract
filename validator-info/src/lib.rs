@@ -28,7 +28,7 @@ pub enum ContractError {
 Register your entrypoints (contract methods) here.
 
 Every entrypoint consists of:
-- name
+- name of the function entry point it tries to load
 - list of params
 - return type
 - access type
@@ -122,7 +122,7 @@ The method persists to the contract context on the blockchain, a key that is nam
 and a value that is a URef to a String that contains the url.
 */
 #[no_mangle]
-fn set_url() {
+fn setUrl() {
     let url: String = runtime::get_named_arg("url");
 
     if !RE_URL.is_match(&url) {
@@ -136,7 +136,7 @@ The method will check the contract’s storage scope for a key named the value o
 If none is found, a NotFound error is thrown. If one is found, the value of the associated URef is returned (ie. the stored URL belonging to the Public Hash).
 */
 #[no_mangle]
-fn get_url() {
+fn getUrl() {
     let public_key: String = runtime::get_named_arg("public_key");
 
     get_key::<String>(&public_key);
@@ -146,7 +146,7 @@ fn get_url() {
 The method deletes from the contract’s storage scope on the blockchain a key that is named for the Public Hash of the caller.
 */
 #[no_mangle]
-fn delete_url() {
+fn deleteUrl() {
     del_key(&get_caller_name());
 }
 
@@ -162,7 +162,7 @@ Similarly checks can be performed on the public_hash input parameter.
 The method persists to the contract context on the blockchain, a key that is named after the public_hash and a value that is a URef to a String that contains the url.
 */
 #[no_mangle]
-fn set_url_for_validator() {
+fn setUrlForValidator() {
     assert_admin_rights();
 
     let public_hash: String = runtime::get_named_arg("public_hash");
@@ -182,7 +182,7 @@ If the caller should not have access, a NotAllowed error should be thrown.
 The method deletes from the contract’s storage scope on the blockchain a key that is named for the public_hash input parameter.
 */
 #[no_mangle]
-fn delete_url_for_validator() {
+fn deleteUrlForValidator() {
     assert_admin_rights();
 
     let public_hash: String = runtime::get_named_arg("public_hash");
