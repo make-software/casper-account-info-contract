@@ -1,8 +1,9 @@
 [package]
 name = "tests"
-version = "0.1.0"
-authors = ["https://github.com/make-software"]
+version = "0.2.0"
+authors = ["https://github.com/make-software", "Oleg Kovalov <oleg@make.services>"]
 edition = "2018"
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
