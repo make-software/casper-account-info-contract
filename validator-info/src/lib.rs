@@ -1,12 +1,14 @@
+extern crate alloc;
+
 use contract::{
-    contract_api::{runtime, storage},
+    contract_api::{runtime, storage, runtime::revert},
     unwrap_or_revert::UnwrapOrRevert,
 };
 use std::convert::TryInto;
 
 use types::{
     bytesrepr::{FromBytes, ToBytes},
-    contracts::ContractPackageHash,
+    contracts::ContractPackageHash, ApiError, Key,
     CLType, CLTyped, EntryPoint, EntryPointAccess, EntryPointType, EntryPoints, Parameter,
 };
 
@@ -19,9 +21,15 @@ lazy_static! {
 
 #[derive(Debug)]
 pub enum ContractError {
-    NotFound,
-    BadUrlFormat,
-    NotAllowed,
+    NotFound = 1,
+    BadUrlFormat = 2,
+    NotAllowed = 3,
+}
+
+impl Into<ApiError> for ContractError{
+    fn into(self) -> ApiError{
+        ApiError::User(self as u16)
+    }
 }
 
 /*
@@ -34,82 +42,79 @@ Every entrypoint consists of:
 - access type
 - type
 
-For more, see: https://docs.rs/casper-types/0.1.0/casper_types/contracts/struct.EntryPoint.html
+For more, see: https://docs.rs/casper-types/1.2.0/casper_types/contracts/struct.EntryPoint.html
 */
-pub fn get_entry_points() -> EntryPoints {
+pub fn get_entry_points(contract_package_hash: &ContractPackageHash) -> EntryPoints {
     let mut entry_points = EntryPoints::new();
+    let deployer_group = storage::create_contract_user_group(
+        *contract_package_hash,
+        "admin",
+        1,
+        alloc::collections::BTreeSet::default(),
+    )
+    .unwrap_or_revert();
+    runtime::put_key("admin_access", Key::URef(deployer_group[0]));
     entry_points.add_entry_point(EntryPoint::new(
-        String::from("setUrl"),
+        "set_url",
         vec![Parameter::new("url", CLType::String)],
         CLType::Unit,
         EntryPointAccess::Public,
         EntryPointType::Contract,
     ));
     entry_points.add_entry_point(EntryPoint::new(
-        String::from("getUrl"),
-        vec![Parameter::new("public_key", CLType::String)],
+        "get_url",
+        vec![Parameter::new("public_key", CLType::PublicKey)],
         CLType::Unit,
         EntryPointAccess::Public,
         EntryPointType::Contract,
     ));
     entry_points.add_entry_point(EntryPoint::new(
-        String::from("deleteUrl"),
+        "delete_url",
         vec![],
         CLType::Unit,
         EntryPointAccess::Public,
         EntryPointType::Contract,
     ));
     entry_points.add_entry_point(EntryPoint::new(
-        String::from("setUrlForValidator"),
+        "set_url_for_validator",
         vec![
             Parameter::new("public_hash", CLType::String),
             Parameter::new("url", CLType::String),
-            ],
-            CLType::Unit,
-            EntryPointAccess::Public,
-            EntryPointType::Contract,
+        ],
+        CLType::Unit,
+        EntryPointAccess::groups(&["admin"]),
+        EntryPointType::Contract,
     ));
     entry_points.add_entry_point(EntryPoint::new(
-        String::from("deleteUrlForValidator"),
+        "delete_url_for_validator",
         vec![Parameter::new("public_hash", CLType::String)],
         CLType::Unit,
-        EntryPointAccess::Public,
+        EntryPointAccess::groups(&["admin"]),
         EntryPointType::Contract,
     ));
     entry_points
 }
 
 /*
-Deploy of the contract by it's name.
-
-See: https://docs.casperlabs.io/en/latest/dapp-dev-guide/deploying-contracts.html
+Deploy or upgrade of the contract by it's name.
 */
-pub fn deploy_validator_info_contract(name: String) {
-    let entry_points = get_entry_points();
-    let (contract_hash, _) = storage::new_contract(
-        entry_points,
-        None,
-        Some(format!("{}-package-hash", name)),
-        Some(format!("{}-access-uref", name)),
-    );
-    runtime::put_key(&name, contract_hash.into());
-}
-
-/*
-Upgrade of the contract by it's name.
-*/
-pub fn upgrade_validator_info_contract(name: String) {
-    let entry_points = get_entry_points();
-    let package_hash: ContractPackageHash = runtime::get_key(&format!("{}-package-hash", name))
-        .unwrap()
-        .into_hash()
-        .unwrap()
-        .into();
-    let (contract_hash, _) = storage::add_contract_version(
-        package_hash,
-        entry_points,
-        Default::default(),
-    );
+pub fn install_or_upgrade_contract(name: String) {
+    let contract_package_hash : ContractPackageHash = match runtime::get_key(&format!("{}-package-hash", name)){
+        Some(contract_package_hash)=>{
+            contract_package_hash
+            .into_hash()
+            .unwrap_or_revert()
+            .into()
+        },None=>{
+            let (contract_package_hash, access_token) = storage::create_contract_package_at_hash();
+            runtime::put_key(&format!("{}-package-hash", name), contract_package_hash.into());
+            runtime::put_key(&format!("{}-access-uref", name), access_token.into());
+            contract_package_hash
+        }
+    };
+    let entry_points = get_entry_points(&contract_package_hash);
+    let (contract_hash, _) =
+    storage::add_contract_version(contract_package_hash, entry_points, Default::default());
     runtime::put_key(&name, contract_hash.into());
 }
 
@@ -122,11 +127,11 @@ The method persists to the contract context on the blockchain, a key that is nam
 and a value that is a URef to a String that contains the url.
 */
 #[no_mangle]
-fn setUrl() {
+fn set_url() {
     let url: String = runtime::get_named_arg("url");
 
     if !RE_URL.is_match(&url) {
-        panic!(ContractError::BadUrlFormat)
+        revert(ContractError::BadUrlFormat)
     }
     set_key(&get_caller_name(), url);
 }
@@ -136,18 +141,16 @@ The method will check the contract’s storage scope for a key named the value o
 If none is found, a NotFound error is thrown. If one is found, the value of the associated URef is returned (ie. the stored URL belonging to the Public Hash).
 */
 #[no_mangle]
-fn getUrl() {
-    let public_key: String = runtime::get_named_arg("public_key");
-
-    get_key::<String>(&public_key);
+fn get_url() {
+    get_key::<String>(&runtime::get_named_arg::<String>("public_key"));
 }
 
 /*
 The method deletes from the contract’s storage scope on the blockchain a key that is named for the Public Hash of the caller.
 */
 #[no_mangle]
-fn deleteUrl() {
-    del_key(&get_caller_name());
+fn delete_url() {
+    runtime::remove_key(&get_caller_name());
 }
 
 /*
@@ -162,16 +165,13 @@ Similarly checks can be performed on the public_hash input parameter.
 The method persists to the contract context on the blockchain, a key that is named after the public_hash and a value that is a URef to a String that contains the url.
 */
 #[no_mangle]
-fn setUrlForValidator() {
-    assert_admin_rights();
-
-    let public_hash: String = runtime::get_named_arg("public_hash");
+fn set_url_for_validator() {
     let url: String = runtime::get_named_arg("url");
 
     if !RE_URL.is_match(&url) {
-        panic!(ContractError::BadUrlFormat)
+        revert(ContractError::BadUrlFormat)
     }
-    set_key(&public_hash, url);
+    set_key(&runtime::get_named_arg::<String>("public_hash"), url);
 }
 
 /*
@@ -182,29 +182,8 @@ If the caller should not have access, a NotAllowed error should be thrown.
 The method deletes from the contract’s storage scope on the blockchain a key that is named for the public_hash input parameter.
 */
 #[no_mangle]
-fn deleteUrlForValidator() {
-    assert_admin_rights();
-
-    let public_hash: String = runtime::get_named_arg("public_hash");
-
-    del_key(&public_hash);
-}
-
-// Helper functions, reused between entrypoints (nice to have in other contracts).
-
-fn assert_admin_rights() {
-    if !has_admin_rights(&get_caller_name()) {
-        panic!(ContractError::NotAllowed)
-    }
-}
-
-fn has_admin_rights(caller: &str) -> bool {
-    get_privileged_hashes().iter().any(|&x| x == caller)
-}
-
-fn get_privileged_hashes() -> Vec<&'static str> {
-    // TODO: get_key::<Vec<&'static str>>(&"_admins")
-    [].to_vec()
+fn delete_url_for_validator() {
+    runtime::remove_key(&runtime::get_named_arg::<String>("public_hash"));
 }
 
 fn get_caller_name() -> String {
@@ -239,13 +218,4 @@ fn set_key<T: ToBytes + CLTyped>(name: &str, value: T) {
             runtime::put_key(name, key);
         }
     }
-}
-
-/*
-Deletes a key by it's name.
-
-Added for clarity and unified API.
-*/
-fn del_key(name: &str) {
-    runtime::remove_key(name)
 }

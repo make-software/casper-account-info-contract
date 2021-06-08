@@ -1,14 +1,14 @@
 #[cfg(test)]
 mod tests {
-    use casper_engine_test_support::{Code, Hash, SessionBuilder, TestContextBuilder};
+    use casper_engine_test_support::{Code, SessionBuilder, TestContextBuilder};
     use casper_types::{
         account::AccountHash, runtime_args, PublicKey, RuntimeArgs, SecretKey, U512,
     };
 
     #[test]
-    fn should_setUrl() {
+    fn should_set_url() {
         // Prepare the account.
-        let public_key: PublicKey = SecretKey::ed25519([7u8; 32]).into();
+        let public_key: PublicKey = SecretKey::ed25519_from_bytes([7u8; 32]).unwrap().into();
         let account_addr = AccountHash::from(&public_key);
 
         let mut context = TestContextBuilder::new()
@@ -24,7 +24,7 @@ mod tests {
         context.run(session);
 
         // Call the manager contract to create a new contract.
-        let session_code = Code::NamedKey(String::from("validator-info"), String::from("setUrl"));
+        let session_code = Code::NamedKey(String::from("validator-info"), String::from("set_url"));
         let session_args = runtime_args! {
             "url" => String::from("http://localhost:80")
         };
