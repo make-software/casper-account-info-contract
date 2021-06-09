@@ -1,23 +1,17 @@
 extern crate alloc;
 
 use contract::{
-    contract_api::{runtime, storage, runtime::revert},
+    contract_api::{runtime, runtime::revert, storage},
     unwrap_or_revert::UnwrapOrRevert,
 };
 use std::convert::TryInto;
 
 use types::{
     bytesrepr::{FromBytes, ToBytes},
-    contracts::ContractPackageHash, ApiError, Key,
-    CLType, CLTyped, EntryPoint, EntryPointAccess, EntryPointType, EntryPoints, Parameter,
+    contracts::ContractPackageHash,
+    ApiError, CLType, CLTyped, EntryPoint, EntryPointAccess, EntryPointType, EntryPoints, Key,
+    Parameter,
 };
-
-use lazy_static::lazy_static;
-use regex::Regex;
-
-lazy_static! {
-    static ref RE_URL: Regex = Regex::new(r"^https?://.*$").unwrap();
-}
 
 #[derive(Debug)]
 pub enum ContractError {
@@ -26,12 +20,15 @@ pub enum ContractError {
     NotAllowed = 3,
 }
 
-impl Into<ApiError> for ContractError{
-    fn into(self) -> ApiError{
-        ApiError::User(self as u16)
+impl From<ContractError> for ApiError {
+    fn from(err: ContractError) -> ApiError {
+        ApiError::User(err as u16)
     }
 }
 
+fn check_url(url: &str) -> bool {
+    url.starts_with("https://") || url.starts_with("http://")
+}
 /*
 Register your entrypoints (contract methods) here.
 
@@ -99,22 +96,25 @@ pub fn get_entry_points(contract_package_hash: &ContractPackageHash) -> EntryPoi
 Deploy or upgrade of the contract by it's name.
 */
 pub fn install_or_upgrade_contract(name: String) {
-    let contract_package_hash : ContractPackageHash = match runtime::get_key(&format!("{}-package-hash", name)){
-        Some(contract_package_hash)=>{
-            contract_package_hash
-            .into_hash()
-            .unwrap_or_revert()
-            .into()
-        },None=>{
-            let (contract_package_hash, access_token) = storage::create_contract_package_at_hash();
-            runtime::put_key(&format!("{}-package-hash", name), contract_package_hash.into());
-            runtime::put_key(&format!("{}-access-uref", name), access_token.into());
-            contract_package_hash
-        }
-    };
+    let contract_package_hash: ContractPackageHash =
+        match runtime::get_key(&format!("{}-package-hash", name)) {
+            Some(contract_package_hash) => {
+                contract_package_hash.into_hash().unwrap_or_revert().into()
+            }
+            None => {
+                let (contract_package_hash, access_token) =
+                    storage::create_contract_package_at_hash();
+                runtime::put_key(
+                    &format!("{}-package-hash", name),
+                    contract_package_hash.into(),
+                );
+                runtime::put_key(&format!("{}-access-uref", name), access_token.into());
+                contract_package_hash
+            }
+        };
     let entry_points = get_entry_points(&contract_package_hash);
     let (contract_hash, _) =
-    storage::add_contract_version(contract_package_hash, entry_points, Default::default());
+        storage::add_contract_version(contract_package_hash, entry_points, Default::default());
     runtime::put_key(&name, contract_hash.into());
 }
 
@@ -130,7 +130,7 @@ and a value that is a URef to a String that contains the url.
 fn set_url() {
     let url: String = runtime::get_named_arg("url");
 
-    if !RE_URL.is_match(&url) {
+    if !check_url(&url) {
         revert(ContractError::BadUrlFormat)
     }
     set_key(&get_caller_name(), url);
@@ -168,7 +168,7 @@ The method persists to the contract context on the blockchain, a key that is nam
 fn set_url_for_validator() {
     let url: String = runtime::get_named_arg("url");
 
-    if !RE_URL.is_match(&url) {
+    if !check_url(&url) {
         revert(ContractError::BadUrlFormat)
     }
     set_key(&runtime::get_named_arg::<String>("public_hash"), url);
