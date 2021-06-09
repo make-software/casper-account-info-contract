@@ -9,8 +9,8 @@ use std::convert::TryInto;
 use types::{
     bytesrepr::{FromBytes, ToBytes},
     contracts::ContractPackageHash,
-    ApiError, CLType, CLTyped, EntryPoint, EntryPointAccess, EntryPointType, EntryPoints, Key,
-    Parameter,
+    ApiError, CLType, CLTyped, CLValue, EntryPoint, EntryPointAccess, EntryPointType, EntryPoints,
+    Key, Parameter,
 };
 
 #[derive(Debug)]
@@ -62,8 +62,8 @@ pub fn get_entry_points(contract_package_hash: &ContractPackageHash) -> EntryPoi
     ));
     entry_points.add_entry_point(EntryPoint::new(
         "get_url",
-        vec![Parameter::new("public_key", CLType::PublicKey)],
-        CLType::Unit,
+        vec![Parameter::new("account_hash", CLType::PublicKey)],
+        CLType::String,
         EntryPointAccess::Public,
         EntryPointType::Contract,
     ));
@@ -77,7 +77,7 @@ pub fn get_entry_points(contract_package_hash: &ContractPackageHash) -> EntryPoi
     entry_points.add_entry_point(EntryPoint::new(
         "set_url_for_validator",
         vec![
-            Parameter::new("public_hash", CLType::String),
+            Parameter::new("account_hash", CLType::String),
             Parameter::new("url", CLType::String),
         ],
         CLType::Unit,
@@ -86,7 +86,7 @@ pub fn get_entry_points(contract_package_hash: &ContractPackageHash) -> EntryPoi
     ));
     entry_points.add_entry_point(EntryPoint::new(
         "delete_url_for_validator",
-        vec![Parameter::new("public_hash", CLType::String)],
+        vec![Parameter::new("account_hash", CLType::String)],
         CLType::Unit,
         EntryPointAccess::groups(&["admin"]),
         EntryPointType::Contract,
@@ -137,7 +137,8 @@ fn set_url() {
 /// Getter function for stored URLs. Returns data stored under the `account_hash` argument.
 #[no_mangle]
 fn get_url() {
-    get_key::<String>(&runtime::get_named_arg::<String>("account_hash"));
+    let url = get_key::<String>(&runtime::get_named_arg::<String>("account_hash"));
+    runtime::ret(CLValue::from_t(url).unwrap_or_revert());
 }
 
 /// Function so the caller can remove their stored URL from the contract.
