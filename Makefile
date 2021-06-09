@@ -13,6 +13,7 @@ lint:
 
 clean:
 	cargo clean
+	rm ./tests/wasm/*
 
 copy-wasm-file-to-test:
 	cp target/wasm32-unknown-unknown/release/validator-info.wasm tests/wasm

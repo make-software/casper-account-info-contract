@@ -117,7 +117,12 @@ pub fn install_or_upgrade_contract(name: String) {
     let entry_points = get_entry_points(&contract_package_hash);
     let (contract_hash, _) =
         storage::add_contract_version(contract_package_hash, entry_points, Default::default());
+
     runtime::put_key(&name, contract_hash.into());
+    runtime::put_key(
+        &format!("{}-wrapped", name),
+        storage::new_uref(contract_hash).into(),
+    );
 }
 
 // Entry points
