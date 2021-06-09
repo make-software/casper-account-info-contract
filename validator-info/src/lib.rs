@@ -34,13 +34,15 @@ Register your entrypoints (contract methods) here.
 
 Every entrypoint consists of:
 - name of the function entry point it tries to load
-- list of params
-- return type
-- access type
-- type
+- list of params: Vec<Parameter>
+- return type: CLType
+- access type: Public or group limited
+- contract context type: Contract or Session(callers account)
 
 For more, see: https://docs.rs/casper-types/1.2.0/casper_types/contracts/struct.EntryPoint.html
 */
+
+/// Returns the list of the entry points in the contract with added group security.
 pub fn get_entry_points(contract_package_hash: &ContractPackageHash) -> EntryPoints {
     let mut entry_points = EntryPoints::new();
     let deployer_group = storage::create_contract_user_group(
@@ -92,9 +94,9 @@ pub fn get_entry_points(contract_package_hash: &ContractPackageHash) -> EntryPoi
     entry_points
 }
 
-/*
-Deploy or upgrade of the contract by it's name.
-*/
+/// Deployer/upgrader function. Tries to retrieve any data presumably stored earlier
+/// in the context associated to to `name`. If there is data, proceeds with that,
+/// otherwise creates a new contract.
 pub fn install_or_upgrade_contract(name: String) {
     let contract_package_hash: ContractPackageHash =
         match runtime::get_key(&format!("{}-package-hash", name)) {
@@ -118,14 +120,10 @@ pub fn install_or_upgrade_contract(name: String) {
     runtime::put_key(&name, contract_hash.into());
 }
 
-/*
-The method can perform basic checks on the input parameters url.
-Is it not empty, is it correctly typed (I believe this will be checked by the runtime), does it match a URL regex rule.
-Error can be thrown. We should have explicit error codes/messages if we have multiple error possibilities
+// Entry points
 
-The method persists to the contract context on the blockchain, a key that is named after the caller of the contract,
-and a value that is a URef to a String that contains the url.
-*/
+/// Stores the `url` parameter to the contract callers AccountHash.
+/// Needs to start with `http://` or `https://`.
 #[no_mangle]
 fn set_url() {
     let url: String = runtime::get_named_arg("url");
@@ -133,37 +131,23 @@ fn set_url() {
     if !check_url(&url) {
         revert(ContractError::BadUrlFormat)
     }
-    set_key(&get_caller_name(), url);
+    set_key(&get_caller_hash(), url);
 }
 
-/*
-The method will check the contract’s storage scope for a key named the value of public_key.
-If none is found, a NotFound error is thrown. If one is found, the value of the associated URef is returned (ie. the stored URL belonging to the Public Hash).
-*/
+/// Getter function for stored URLs. Returns data stored under the `account_hash` argument.
 #[no_mangle]
 fn get_url() {
-    get_key::<String>(&runtime::get_named_arg::<String>("public_key"));
+    get_key::<String>(&runtime::get_named_arg::<String>("account_hash"));
 }
 
-/*
-The method deletes from the contract’s storage scope on the blockchain a key that is named for the Public Hash of the caller.
-*/
+/// Function so the caller can remove their stored URL from the contract.
 #[no_mangle]
 fn delete_url() {
-    runtime::remove_key(&get_caller_name());
+    runtime::remove_key(&get_caller_hash());
 }
 
-/*
-The method can only be called by a caller who has admin rights to the contract (ie. is in the list of privileged public hashes).
-This should be checked as a first step when the method is invoked. If the caller should not have access, a NotAllowed error should be thrown.
-
-the method can perform basic checks on the input parameters url.
-Is it not empty, is it correctly typed (I believe this will be checked by the runtime), does it match a URL regex rule.
-Error can be thrown. We should have explicit error codes/messages if we have multiple error possibilities.
-Similarly checks can be performed on the public_hash input parameter.
-
-The method persists to the contract context on the blockchain, a key that is named after the public_hash and a value that is a URef to a String that contains the url.
-*/
+/// Administrator function that can create new or overwrite already existing urls stored under `AccountHash`es.
+/// Can still only store URLs.
 #[no_mangle]
 fn set_url_for_validator() {
     let url: String = runtime::get_named_arg("url");
@@ -171,29 +155,25 @@ fn set_url_for_validator() {
     if !check_url(&url) {
         revert(ContractError::BadUrlFormat)
     }
-    set_key(&runtime::get_named_arg::<String>("public_hash"), url);
+    set_key(&runtime::get_named_arg::<String>("account_hash"), url);
 }
 
-/*
-The method can only be called by a caller who has admin rights to the contract (ie. is in the list of privileged public hashes).
-This should be checked as a first step when the method is invoked.
-If the caller should not have access, a NotAllowed error should be thrown.
-
-The method deletes from the contract’s storage scope on the blockchain a key that is named for the public_hash input parameter.
-*/
+/// Administrator function to remove stored data from the contract.
 #[no_mangle]
 fn delete_url_for_validator() {
-    runtime::remove_key(&runtime::get_named_arg::<String>("public_hash"));
+    runtime::remove_key(&runtime::get_named_arg::<String>("account_hash"));
 }
 
-fn get_caller_name() -> String {
+//Utility functions
+
+/// Getter function for the `AccountHash` for the account that called the function.
+fn get_caller_hash() -> String {
     runtime::get_caller().to_string()
 }
 
-/*
-Get key by it's name.
-Automatically converts value to a type T known during compilation time.
-*/
+/// Getter function from context storage.
+/// Returns the previously data previously stored under `name` key,
+/// or returns the default value of the type expected at the end of the call.
 fn get_key<T: FromBytes + CLTyped + Default>(name: &str) -> T {
     match runtime::get_key(name) {
         None => Default::default(),
@@ -204,9 +184,8 @@ fn get_key<T: FromBytes + CLTyped + Default>(name: &str) -> T {
     }
 }
 
-/*
-Set given key-value.
-*/
+/// Creates new storage key `name` and stores `value` to it.
+/// In case the key `name` already exists, overwrites it with the new data.
 fn set_key<T: ToBytes + CLTyped>(name: &str, value: T) {
     match runtime::get_key(name) {
         Some(key) => {
