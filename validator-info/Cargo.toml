@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 contract = { package = "casper-contract", version="1.2.0" }
 types = { package = "casper-types", version="1.2.0" }
+hex = "0.4.3"
 
 [[bin]]
 name = "validator-info"

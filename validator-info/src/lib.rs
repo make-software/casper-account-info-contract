@@ -5,6 +5,7 @@ use contract::{
     unwrap_or_revert::UnwrapOrRevert,
 };
 use std::convert::TryInto;
+use types::PublicKey;
 
 use types::{
     bytesrepr::{FromBytes, ToBytes},
@@ -55,21 +56,24 @@ pub fn get_entry_points(contract_package_hash: &ContractPackageHash) -> EntryPoi
     runtime::put_key("admin_access", Key::URef(deployer_group[0]));
     entry_points.add_entry_point(EntryPoint::new(
         "set_url",
-        vec![Parameter::new("url", CLType::String)],
+        vec![
+            Parameter::new("public_key", CLType::PublicKey),
+            Parameter::new("url", CLType::String),
+        ],
         CLType::Unit,
         EntryPointAccess::Public,
         EntryPointType::Contract,
     ));
     entry_points.add_entry_point(EntryPoint::new(
         "get_url",
-        vec![Parameter::new("account_hash", CLType::PublicKey)],
+        vec![Parameter::new("public_key", CLType::PublicKey)],
         CLType::String,
         EntryPointAccess::Public,
         EntryPointType::Contract,
     ));
     entry_points.add_entry_point(EntryPoint::new(
         "delete_url",
-        vec![],
+        vec![Parameter::new("public_key", CLType::PublicKey)],
         CLType::Unit,
         EntryPointAccess::Public,
         EntryPointType::Contract,
@@ -77,7 +81,7 @@ pub fn get_entry_points(contract_package_hash: &ContractPackageHash) -> EntryPoi
     entry_points.add_entry_point(EntryPoint::new(
         "set_url_for_validator",
         vec![
-            Parameter::new("account_hash", CLType::String),
+            Parameter::new("public_key", CLType::PublicKey),
             Parameter::new("url", CLType::String),
         ],
         CLType::Unit,
@@ -86,7 +90,7 @@ pub fn get_entry_points(contract_package_hash: &ContractPackageHash) -> EntryPoi
     ));
     entry_points.add_entry_point(EntryPoint::new(
         "delete_url_for_validator",
-        vec![Parameter::new("account_hash", CLType::String)],
+        vec![Parameter::new("public_key", CLType::PublicKey)],
         CLType::Unit,
         EntryPointAccess::groups(&["admin"]),
         EntryPointType::Contract,
@@ -127,54 +131,69 @@ pub fn install_or_upgrade_contract(name: String) {
 
 // Entry points
 
-/// Stores the `url` parameter to the contract callers AccountHash.
+/// Stores the `url` parameter to the contract callers PublicKey.
 /// Needs to start with `http://` or `https://`.
 #[no_mangle]
 fn set_url() {
     let url: String = runtime::get_named_arg("url");
+    let public: PublicKey = runtime::get_named_arg("public_key");
 
     if !check_url(&url) {
         revert(ContractError::BadUrlFormat)
     }
-    set_key(&get_caller_hash(), url);
+    set_key(&check_publickey(&public), url);
 }
 
-/// Getter function for stored URLs. Returns data stored under the `account_hash` argument.
+/// Getter function for stored URLs. Returns data stored under the `public_key` argument.
 #[no_mangle]
 fn get_url() {
-    let url = get_key::<String>(&runtime::get_named_arg::<String>("account_hash"));
+    let public_key = runtime::get_named_arg::<PublicKey>("public_key");
+    let url = get_key::<String>(&pubkey_to_string(&public_key));
     runtime::ret(CLValue::from_t(url).unwrap_or_revert());
 }
 
 /// Function so the caller can remove their stored URL from the contract.
 #[no_mangle]
 fn delete_url() {
-    runtime::remove_key(&get_caller_hash());
+    runtime::remove_key(&check_publickey(&runtime::get_named_arg::<PublicKey>(
+        "public_key",
+    )));
 }
 
-/// Administrator function that can create new or overwrite already existing urls stored under `AccountHash`es.
+/// Administrator function that can create new or overwrite already existing urls stored under `PublicKey`es.
 /// Can still only store URLs.
 #[no_mangle]
 fn set_url_for_validator() {
     let url: String = runtime::get_named_arg("url");
-
+    let public = runtime::get_named_arg::<PublicKey>("public_key");
     if !check_url(&url) {
         revert(ContractError::BadUrlFormat)
     }
-    set_key(&runtime::get_named_arg::<String>("account_hash"), url);
+    set_key(&pubkey_to_string(&public), url);
 }
 
 /// Administrator function to remove stored data from the contract.
 #[no_mangle]
 fn delete_url_for_validator() {
-    runtime::remove_key(&runtime::get_named_arg::<String>("account_hash"));
+    let public = runtime::get_named_arg::<PublicKey>("public_key");
+    runtime::remove_key(&pubkey_to_string(&public));
 }
 
-//Utility functions
+// Utility functions
 
-/// Getter function for the `AccountHash` for the account that called the function.
-fn get_caller_hash() -> String {
-    runtime::get_caller().to_string()
+/// Hex encode public key.
+fn pubkey_to_string(pubkey: &PublicKey) -> String {
+    hex::encode(pubkey.to_bytes().unwrap_or_revert())
+}
+
+/// Checker function for extra security. Tries to match the public key to the callers PublicKey.
+/// This is not used with administrator function version.
+fn check_publickey(pubkey: &PublicKey) -> String {
+    if pubkey.to_account_hash() == runtime::get_caller() {
+        pubkey_to_string(pubkey)
+    } else {
+        revert(ContractError::NotAllowed)
+    }
 }
 
 /// Getter function from context storage.
