@@ -1,15 +1,10 @@
 #[cfg(test)]
 mod tests {
     use casper_engine_test_support::{Code, Hash, SessionBuilder, TestContext, TestContextBuilder};
-    use casper_types::bytesrepr::ToBytes;
     use casper_types::{
         account::AccountHash, bytesrepr::FromBytes, runtime_args, CLTyped, PublicKey, RuntimeArgs,
         SecretKey, U512,
     };
-
-    fn pubkey_to_string(pubkey: &PublicKey) -> String {
-        hex::encode(pubkey.to_bytes().unwrap())
-    }
 
     pub struct ValidatorContract {
         pub context: TestContext,
@@ -86,17 +81,15 @@ mod tests {
     fn test_url_set_get() {
         // Deploy contract.
         let mut contract = ValidatorContract::deploy();
-
         // Set URL of the user.
         let user = contract.user;
         let set_args = runtime_args! {
             "url" => contract.user_url.clone(),
-            "public_key" => contract.user_pk.clone()
         };
         contract.call(&user, "set_url", set_args);
 
         // Read URL of user from the context.
-        let user_url: String = contract.query(&pubkey_to_string(&contract.user_pk));
+        let user_url: String = contract.query(&contract.user.to_string());
 
         // Check if we have stored the URL.
         assert_eq!(user_url, contract.user_url);
@@ -110,24 +103,17 @@ mod tests {
         // Set URL of the user.
         let user = contract.user;
         let set_args = runtime_args! {
-            "public_key" => contract.user_pk.clone(),
             "url" => contract.user_url.clone()
         };
         contract.call(&user, "set_url", set_args);
         // Read URL of user from the context.
-        let user_url: String = contract.query(&pubkey_to_string(&contract.user_pk));
+        let user_url: String = contract.query(&contract.user.to_string());
 
         // Check if we have stored the URL.
         assert_eq!(user_url, contract.user_url);
 
         // Delete URL of the user
-        contract.call(
-            &user,
-            "delete_url",
-            runtime_args! {
-                "public_key" => contract.user_pk.clone()
-            },
-        );
+        contract.call(&user, "delete_url", runtime_args! {});
 
         // This call will panic as we have deleted the URL belonging to the user and as such there is no data.
         contract.query::<String>(&user.to_string());
@@ -140,14 +126,13 @@ mod tests {
         // User sets their URL.
         let user = contract.user;
         let set_args = runtime_args! {
-            "public_key" => contract.user_pk.clone(),
             "url" => contract.user_url.clone()
         };
 
         contract.call(&user, "set_url", set_args);
 
         // Read URL of user from the context.
-        let user_url: String = contract.query(&pubkey_to_string(&contract.user_pk));
+        let user_url: String = contract.query(&contract.user.to_string());
 
         // Check if we have stored the URL.
         assert_eq!(user_url, contract.user_url);
@@ -161,7 +146,7 @@ mod tests {
         contract.call(&admin, "set_url_for_validator", admin_set_args);
 
         // This call will panic as we have deleted the URL belonging to the user and as such there is no data.
-        let overwritten_url = contract.query::<String>(&pubkey_to_string(&contract.user_pk));
+        let overwritten_url = contract.query::<String>(&contract.user.to_string());
         assert_eq!(overwritten_url, contract.admin_url);
     }
 
@@ -175,13 +160,12 @@ mod tests {
 
         // Admin sets their URL.
         let set_args = runtime_args! {
-            "public_key" => contract.admin_pk.clone(),
             "url" => contract.admin_url.clone()
         };
         contract.call(&admin, "set_url", set_args);
 
         // Read URL of admin from the context.
-        let admin_url: String = contract.query(&pubkey_to_string(&contract.admin_pk));
+        let admin_url: String = contract.query(&contract.admin.to_string());
 
         // Check if we have stored the URL.
         assert_eq!(admin_url, contract.admin_url);

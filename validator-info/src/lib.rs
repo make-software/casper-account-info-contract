@@ -56,10 +56,7 @@ pub fn get_entry_points(contract_package_hash: &ContractPackageHash) -> EntryPoi
     runtime::put_key("admin_access", Key::URef(deployer_group[0]));
     entry_points.add_entry_point(EntryPoint::new(
         "set_url",
-        vec![
-            Parameter::new("public_key", CLType::PublicKey),
-            Parameter::new("url", CLType::String),
-        ],
+        vec![Parameter::new("url", CLType::String)],
         CLType::Unit,
         EntryPointAccess::Public,
         EntryPointType::Contract,
@@ -73,7 +70,7 @@ pub fn get_entry_points(contract_package_hash: &ContractPackageHash) -> EntryPoi
     ));
     entry_points.add_entry_point(EntryPoint::new(
         "delete_url",
-        vec![Parameter::new("public_key", CLType::PublicKey)],
+        vec![],
         CLType::Unit,
         EntryPointAccess::Public,
         EntryPointType::Contract,
@@ -136,12 +133,11 @@ pub fn install_or_upgrade_contract(name: String) {
 #[no_mangle]
 fn set_url() {
     let url: String = runtime::get_named_arg("url");
-    let public: PublicKey = runtime::get_named_arg("public_key");
 
     if !check_url(&url) {
         revert(ContractError::BadUrlFormat)
     }
-    set_key(&check_publickey(&public), url);
+    set_key(&runtime::get_caller().to_string(), url);
 }
 
 /// Getter function for stored URLs. Returns data stored under the `public_key` argument.
@@ -155,9 +151,7 @@ fn get_url() {
 /// Function so the caller can remove their stored URL from the contract.
 #[no_mangle]
 fn delete_url() {
-    runtime::remove_key(&check_publickey(&runtime::get_named_arg::<PublicKey>(
-        "public_key",
-    )));
+    runtime::remove_key(&runtime::get_caller().to_string());
 }
 
 /// Administrator function that can create new or overwrite already existing urls stored under `PublicKey`es.
@@ -183,17 +177,7 @@ fn delete_url_for_validator() {
 
 /// Hex encode public key.
 fn pubkey_to_string(pubkey: &PublicKey) -> String {
-    hex::encode(pubkey.to_bytes().unwrap_or_revert())
-}
-
-/// Checker function for extra security. Tries to match the public key to the callers PublicKey.
-/// This is not used with administrator function version.
-fn check_publickey(pubkey: &PublicKey) -> String {
-    if pubkey.to_account_hash() == runtime::get_caller() {
-        pubkey_to_string(pubkey)
-    } else {
-        revert(ContractError::NotAllowed)
-    }
+    pubkey.to_account_hash().to_string()
 }
 
 /// Getter function from context storage.
