@@ -175,7 +175,7 @@ fn delete_url_for_validator() {
 
 // Utility functions
 
-/// Hex encode public key.
+/// Retrieve AccountHash from public key.
 fn pubkey_to_string(pubkey: &PublicKey) -> String {
     pubkey.to_account_hash().to_string()
 }

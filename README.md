@@ -25,9 +25,8 @@ See Casper documentation: [Deploying Contracts](https://docs.casperlabs.io/en/la
 
 - set_url:
     - Arguments:
-        - `public_key` - PublicKey
         - `url` - String
-    - Description: Sets a new storage key in the contract. The key name is the callers `PublicKey` hexed, the value is the argument `url`.
+    - Description: Sets a new storage key in the contract. The key name is the callers `AccountHash` hexed, the value is the argument `url`.
 
 - get_url:
     - Arguments:
@@ -35,18 +34,19 @@ See Casper documentation: [Deploying Contracts](https://docs.casperlabs.io/en/la
     - Description: Getter for a stored URL. Argument `public_key` is the `PublicKey` that the URL belongs to, and is stored under.
 
 - delete_url:
-    - Arguments: 
-        - `public_key` - PublicKey
-    - Description: Function that allows the caller to remove the URL that is stored under their `PublicKey`.
+    - Arguments: None
+    - Description: Function that allows the caller to remove the URL that is stored under their `AccountHash`.
 
 - set_url_for_validator:
     - Arguments:
         - `public_key` - PublicKey
         - `url` - String
     - Description: Administrator function. Same function as `set_url` but can overwrite data set by others.
+    The key is an `AccountHash` derived from the `PublicKey` argument. 
 
 - delete_url_for_validator:
     - Arguments:
         - `public_key` - PublicKey
     - Description: Administrator function. Same function as `delete_url` but can delete data set by others.
+    The key is an `AccountHash` derived from the `PublicKey` argument. 
 
