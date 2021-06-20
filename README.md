@@ -1,52 +1,79 @@
 # Casper Account Info Contract
 
-## Install
-Make sure `wasm32-unknown-unknown` is installed.
+Casper Account Info Contract allows account owners to provide information about themselves to the public by specifying a URL to a [Casper Account Info Standard](https://github.com/make-software/casper-account-info-standard) file.   
+
+## Setup
+
 ```bash
-$ make prepare
+make prepare
 ```
 
 ## Build Smart Contract
+
 ```bash
-$ make build-contract
+make build-contract
+```
+
+The WASM file will be available in the target directory:
+```bash
+target/wasm32-unknown-unknown/release/account-info.wasm
 ```
 
 ## Test
-Test logic and smart contract.
+
 ```bash
-$ make test
+make test
 ```
 
 ## Deploy
 
-See Casper documentation: [Deploying Contracts](https://docs.casperlabs.io/en/latest/dapp-dev-guide/deploying-contracts.html) and [Contracts on the Blockchain](https://docs.casperlabs.io/en/latest/dapp-dev-guide/calling-contracts.html).
+See Casper documentation about [Deploying Contracts](https://docs.casperlabs.io/en/latest/dapp-dev-guide/deploying-contracts.html) and [Contracts on the Blockchain](https://docs.casperlabs.io/en/latest/dapp-dev-guide/calling-contracts.html).
 
-## Contract entrypoints
+## Contract entry points
 
-- set_url:
-    - Arguments:
-        - `url` - String
-    - Description: Sets a new storage key in the contract. The key name is the callers `AccountHash` hexed, the value is the argument `url`.
+### get_url
 
-- get_url:
-    - Arguments:
-        - `public_key` - PublicKey
-    - Description: Getter for a stored URL. Argument `public_key` is the `PublicKey` that the URL belongs to, and is stored under.
+Returns a URL to the account information standard file for the given public key
 
-- delete_url:
-    - Arguments: None
-    - Description: Function that allows the caller to remove the URL that is stored under their `AccountHash`.
+Arguments:
 
-- set_url_for_account:
-    - Arguments:
-        - `public_key` - PublicKey
-        - `url` - String
-    - Description: Administrator function. Same function as `set_url` but can overwrite data set by others.
-    The key is an `AccountHash` derived from the `PublicKey` argument. 
+Name | Type | Description
+---- | ---- | -----------
+```public_key``` | ```PublicKey``` | The public key of the account, which information standard file URL is requested
 
-- delete_url_for_account:
-    - Arguments:
-        - `public_key` - PublicKey
-    - Description: Administrator function. Same function as `delete_url` but can delete data set by others.
-    The key is an `AccountHash` derived from the `PublicKey` argument. 
+### set_url
 
+Sets a URL to the account information standard file for the contract caller 
+
+Arguments:
+
+Name | Type | Description
+---- | ---- | -----------
+```url``` | ```String``` | A URL to the account information standard file
+
+### delete_url
+
+Deletes contract caller's URL to the account information standard file
+
+Arguments: this entry point has no arguments 
+
+### set_url_for_account
+
+Sets a URL to the account information standard file for the provided account. This entry point is available only to the accounts defined as admins.
+
+Arguments:
+
+Name | Type | Description
+---- | ---- | -----------
+```url``` | ```String``` | A URL to the account information standard file
+```public_key``` | ```PublicKey``` | The public key of the account, the information standard file URL should be set for
+
+### delete_url_for_account
+
+Deletes the account information standard file URL from the provided account. This entry point is available only to the accounts defined as admins.
+
+Arguments: 
+
+Name | Type | Description
+---- | ---- | -----------
+```public_key``` | ```PublicKey``` | The public key of the account, the URL should be deleted from
