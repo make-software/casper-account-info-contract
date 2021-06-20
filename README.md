@@ -1,4 +1,4 @@
-# Casper Validator Info Contract
+# Casper Account Info Contract
 
 ## Install
 Make sure `wasm32-unknown-unknown` is installed.
@@ -37,14 +37,14 @@ See Casper documentation: [Deploying Contracts](https://docs.casperlabs.io/en/la
     - Arguments: None
     - Description: Function that allows the caller to remove the URL that is stored under their `AccountHash`.
 
-- set_url_for_validator:
+- set_url_for_account:
     - Arguments:
         - `public_key` - PublicKey
         - `url` - String
     - Description: Administrator function. Same function as `set_url` but can overwrite data set by others.
     The key is an `AccountHash` derived from the `PublicKey` argument. 
 
-- delete_url_for_validator:
+- delete_url_for_account:
     - Arguments:
         - `public_key` - PublicKey
     - Description: Administrator function. Same function as `delete_url` but can delete data set by others.

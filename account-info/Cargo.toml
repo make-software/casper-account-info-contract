@@ -1,7 +1,7 @@
 [package]
-name = "validator-info"
+name = "account-info"
 version = "0.2.0"
-authors = ["https://github.com/make-software", "Oleg Kovalov <oleg@make.services>"]
+authors = ["https://github.com/make-software"]
 edition = "2018"
 
 [dependencies]
@@ -10,7 +10,7 @@ types = { package = "casper-types", version="1.2.0" }
 hex = "0.4.3"
 
 [[bin]]
-name = "validator-info"
+name = "account-info"
 path = "src/main.rs"
 bench = false
 doctest = false

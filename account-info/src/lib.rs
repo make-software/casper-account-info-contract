@@ -76,7 +76,7 @@ pub fn get_entry_points(contract_package_hash: &ContractPackageHash) -> EntryPoi
         EntryPointType::Contract,
     ));
     entry_points.add_entry_point(EntryPoint::new(
-        "set_url_for_validator",
+        "set_url_for_account",
         vec![
             Parameter::new("public_key", CLType::PublicKey),
             Parameter::new("url", CLType::String),
@@ -86,7 +86,7 @@ pub fn get_entry_points(contract_package_hash: &ContractPackageHash) -> EntryPoi
         EntryPointType::Contract,
     ));
     entry_points.add_entry_point(EntryPoint::new(
-        "delete_url_for_validator",
+        "delete_url_for_account",
         vec![Parameter::new("public_key", CLType::PublicKey)],
         CLType::Unit,
         EntryPointAccess::groups(&["admin"]),
@@ -157,20 +157,20 @@ fn delete_url() {
 /// Administrator function that can create new or overwrite already existing urls stored under `PublicKey`es.
 /// Can still only store URLs.
 #[no_mangle]
-fn set_url_for_validator() {
+fn set_url_for_account() {
     let url: String = runtime::get_named_arg("url");
-    let public = runtime::get_named_arg::<PublicKey>("public_key");
+    let public_key = runtime::get_named_arg::<PublicKey>("public_key");
     if !check_url(&url) {
         revert(ContractError::BadUrlFormat)
     }
-    set_key(&pubkey_to_string(&public), url);
+    set_key(&pubkey_to_string(&public_key), url);
 }
 
 /// Administrator function to remove stored data from the contract.
 #[no_mangle]
-fn delete_url_for_validator() {
-    let public = runtime::get_named_arg::<PublicKey>("public_key");
-    runtime::remove_key(&pubkey_to_string(&public));
+fn delete_url_for_account() {
+    let public_key = runtime::get_named_arg::<PublicKey>("public_key");
+    runtime::remove_key(&pubkey_to_string(&public_key));
 }
 
 // Utility functions

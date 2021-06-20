@@ -6,7 +6,7 @@ mod tests {
         SecretKey, U512,
     };
 
-    pub struct ValidatorContract {
+    pub struct AccountInfoContract {
         pub context: TestContext,
         pub contract_hash: Hash,
         pub admin: AccountHash,
@@ -17,7 +17,7 @@ mod tests {
         pub user_url: String,
     }
 
-    impl ValidatorContract {
+    impl AccountInfoContract {
         pub fn deploy() -> Self {
             // Create admin.
             let admin_key: PublicKey = SecretKey::ed25519_from_bytes([1u8; 32]).unwrap().into();
@@ -34,7 +34,7 @@ mod tests {
                 .build();
 
             // Deploy the main contract onto the context.
-            let session_code = Code::from("validator-info.wasm");
+            let session_code = Code::from("account-info.wasm");
             let session = SessionBuilder::new(session_code, RuntimeArgs::new())
                 .with_address(admin_addr)
                 .with_authorization_keys(&[admin_addr])
@@ -42,10 +42,10 @@ mod tests {
             context.run(session);
 
             let contract_hash = context
-                .query(admin_addr, &["validator-info-wrapped".to_string()])
-                .unwrap_or_else(|_| panic!("validator-info contract not found"))
+                .query(admin_addr, &["account-info-wrapped".to_string()])
+                .unwrap_or_else(|_| panic!("account-info contract not found"))
                 .into_t()
-                .unwrap_or_else(|_| panic!("validator-info has wrong type"));
+                .unwrap_or_else(|_| panic!("account-info has wrong type"));
 
             Self {
                 context,
@@ -61,7 +61,7 @@ mod tests {
 
         pub fn query<T: FromBytes + CLTyped>(&self, key: &str) -> T {
             self.context
-                .query(self.admin, &["validator-info".to_string(), key.to_string()])
+                .query(self.admin, &["account-info".to_string(), key.to_string()])
                 .unwrap()
                 .into_t()
                 .unwrap()
@@ -80,7 +80,7 @@ mod tests {
     #[test]
     fn test_url_set_get() {
         // Deploy contract.
-        let mut contract = ValidatorContract::deploy();
+        let mut contract = AccountInfoContract::deploy();
         // Set URL of the user.
         let user = contract.user;
         let set_args = runtime_args! {
@@ -99,7 +99,7 @@ mod tests {
     #[should_panic(expected = "ValueNotFound")]
     fn test_delete() {
         // Deploy contract.
-        let mut contract = ValidatorContract::deploy();
+        let mut contract = AccountInfoContract::deploy();
         // Set URL of the user.
         let user = contract.user;
         let set_args = runtime_args! {
@@ -122,7 +122,7 @@ mod tests {
     #[test]
     fn test_administrator_set() {
         // Deploy contract.
-        let mut contract = ValidatorContract::deploy();
+        let mut contract = AccountInfoContract::deploy();
         // User sets their URL.
         let user = contract.user;
         let set_args = runtime_args! {
@@ -143,7 +143,7 @@ mod tests {
             "public_key" => contract.user_pk.clone(),
             "url" => contract.admin_url.clone(),
         };
-        contract.call(&admin, "set_url_for_validator", admin_set_args);
+        contract.call(&admin, "set_url_for_account", admin_set_args);
 
         // This call will panic as we have deleted the URL belonging to the user and as such there is no data.
         let overwritten_url = contract.query::<String>(&contract.user.to_string());
@@ -154,7 +154,7 @@ mod tests {
     #[should_panic(expected = "InvalidContext")]
     fn test_administrator_security() {
         // Deploy contract.
-        let mut contract = ValidatorContract::deploy();
+        let mut contract = AccountInfoContract::deploy();
         let user = contract.user;
         let admin = contract.admin;
 
@@ -176,7 +176,7 @@ mod tests {
         };
 
         // This line should fail as user should not have access to this function.
-        contract.call(&user, "delete_url_for_validator", admin_delete_args);
+        contract.call(&user, "delete_url_for_account", admin_delete_args);
     }
 }
 
