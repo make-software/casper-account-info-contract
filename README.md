@@ -29,6 +29,8 @@ make test
 
 See Casper documentation about [Deploying Contracts](https://docs.casperlabs.io/en/latest/dapp-dev-guide/deploying-contracts.html) and [Contracts on the Blockchain](https://docs.casperlabs.io/en/latest/dapp-dev-guide/calling-contracts.html).
 
+After it's deployed, the account that deployed the contract is assigned as an admin.
+
 ## Contract entry points
 
 ### get_url
@@ -77,3 +79,28 @@ Arguments:
 Name | Type | Description
 ---- | ---- | -----------
 ```public_key``` | ```PublicKey``` | The public key of the account, the URL should be deleted from
+
+### add_admin
+
+Add another admin account.
+If fails if the account already exists.
+This entry point is available only to the accounts defined as admins.
+
+Arguments: 
+
+Name | Type | Description
+---- | ---- | -----------
+```public_key``` | ```PublicKey``` | The public key of the new admin account.
+
+### remove_admin
+
+Remove existing admin account.
+If fails if the account is not an admin.
+If fails if there's only one admin account.
+This entry point is available only to the accounts defined as admins.
+
+Arguments: 
+
+Name | Type | Description
+---- | ---- | -----------
+```public_key``` | ```PublicKey``` | The public key of the existing admin account.
