@@ -244,7 +244,7 @@ fn remove_admin() {
 
 /// Check if given account is an admin.
 fn is_admin(account: &PublicKey) -> bool {
-    runtime::has_key(&admin_pubkey_to_string(&account))
+    runtime::has_key(&admin_pubkey_to_string(account))
 }
 
 /// Check if the caller has admin rights.
