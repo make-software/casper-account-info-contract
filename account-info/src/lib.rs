@@ -5,20 +5,26 @@ use contract::{
     unwrap_or_revert::UnwrapOrRevert,
 };
 use std::convert::TryInto;
-use types::PublicKey;
+use types::{account::AccountHash, contracts::NamedKeys, PublicKey};
 
 use types::{
     bytesrepr::{FromBytes, ToBytes},
     contracts::ContractPackageHash,
     ApiError, CLType, CLTyped, CLValue, EntryPoint, EntryPointAccess, EntryPointType, EntryPoints,
-    Key, Parameter,
+    Parameter,
 };
+
+const ADMIN_FLAG: bool = true;
 
 #[derive(Debug)]
 pub enum ContractError {
     NotFound = 1,
     BadUrlFormat = 2,
     NotAllowed = 3,
+    AdminCountToLow = 4,
+    PermissionDenied = 5,
+    AdminExists = 6,
+    AdminDoesntExist = 7,
 }
 
 impl From<ContractError> for ApiError {
@@ -44,16 +50,8 @@ For more, see: https://docs.rs/casper-types/1.2.0/casper_types/contracts/struct.
 */
 
 /// Returns the list of the entry points in the contract with added group security.
-pub fn get_entry_points(contract_package_hash: &ContractPackageHash) -> EntryPoints {
+pub fn get_entry_points() -> EntryPoints {
     let mut entry_points = EntryPoints::new();
-    let deployer_group = storage::create_contract_user_group(
-        *contract_package_hash,
-        "admin",
-        1,
-        alloc::collections::BTreeSet::default(),
-    )
-    .unwrap_or_revert();
-    runtime::put_key("admin_access", Key::URef(deployer_group[0]));
     entry_points.add_entry_point(EntryPoint::new(
         "set_url",
         vec![Parameter::new("url", CLType::String)],
@@ -82,14 +80,28 @@ pub fn get_entry_points(contract_package_hash: &ContractPackageHash) -> EntryPoi
             Parameter::new("url", CLType::String),
         ],
         CLType::Unit,
-        EntryPointAccess::groups(&["admin"]),
+        EntryPointAccess::Public,
         EntryPointType::Contract,
     ));
     entry_points.add_entry_point(EntryPoint::new(
         "delete_url_for_account",
         vec![Parameter::new("public_key", CLType::PublicKey)],
         CLType::Unit,
-        EntryPointAccess::groups(&["admin"]),
+        EntryPointAccess::Public,
+        EntryPointType::Contract,
+    ));
+    entry_points.add_entry_point(EntryPoint::new(
+        "add_admin",
+        vec![Parameter::new("public_key", CLType::PublicKey)],
+        CLType::Unit,
+        EntryPointAccess::Public,
+        EntryPointType::Contract,
+    ));
+    entry_points.add_entry_point(EntryPoint::new(
+        "remove_admin",
+        vec![Parameter::new("public_key", CLType::PublicKey)],
+        CLType::Unit,
+        EntryPointAccess::Public,
         EntryPointType::Contract,
     ));
     entry_points
@@ -99,6 +111,7 @@ pub fn get_entry_points(contract_package_hash: &ContractPackageHash) -> EntryPoi
 /// in the context associated to to `name`. If there is data, proceeds with that,
 /// otherwise creates a new contract.
 pub fn install_or_upgrade_contract(name: String) {
+    let mut named_keys: NamedKeys = Default::default();
     let contract_package_hash: ContractPackageHash =
         match runtime::get_key(&format!("{}-package-hash", name)) {
             Some(contract_package_hash) => {
@@ -112,12 +125,19 @@ pub fn install_or_upgrade_contract(name: String) {
                     contract_package_hash.into(),
                 );
                 runtime::put_key(&format!("{}-access-uref", name), access_token.into());
+
+                // Add deployer as the first admin.
+                let admin = admin_account_hash_to_string(&runtime::get_caller());
+                let admin_flag = storage::new_uref(ADMIN_FLAG).into();
+                named_keys.insert(admin, admin_flag);
+                named_keys.insert("admins_count".to_string(), storage::new_uref(1u32).into());
+
                 contract_package_hash
             }
         };
-    let entry_points = get_entry_points(&contract_package_hash);
+    let entry_points = get_entry_points();
     let (contract_hash, _) =
-        storage::add_contract_version(contract_package_hash, entry_points, Default::default());
+        storage::add_contract_version(contract_package_hash, entry_points, named_keys);
 
     runtime::put_key(&name, contract_hash.into());
     runtime::put_key(
@@ -158,6 +178,8 @@ fn delete_url() {
 /// Can still only store URLs.
 #[no_mangle]
 fn set_url_for_account() {
+    assert_admin_rights();
+
     let url: String = runtime::get_named_arg("url");
     let public_key = runtime::get_named_arg::<PublicKey>("public_key");
     if !check_url(&url) {
@@ -169,11 +191,81 @@ fn set_url_for_account() {
 /// Administrator function to remove stored data from the contract.
 #[no_mangle]
 fn delete_url_for_account() {
+    assert_admin_rights();
+
     let public_key = runtime::get_named_arg::<PublicKey>("public_key");
     runtime::remove_key(&pubkey_to_string(&public_key));
 }
 
+/// Administrator function to add another administrators.
+#[no_mangle]
+fn add_admin() {
+    assert_admin_rights();
+
+    // Fail if the admin is already registered.
+    let admin = runtime::get_named_arg::<PublicKey>("public_key");
+    if is_admin(&admin) {
+        revert(ContractError::AdminExists);
+    };
+
+    // Set admin.
+    set_key(&admin_pubkey_to_string(&admin), ADMIN_FLAG);
+
+    // Increment admins count.
+    let admins_count: u32 = get_key("admins_count");
+    set_key("admins_count", admins_count + 1);
+}
+
+/// Administrator function to add another administrators.
+#[no_mangle]
+fn remove_admin() {
+    assert_admin_rights();
+
+    // Fail if admin doesn't exists.
+    let admin = runtime::get_named_arg::<PublicKey>("public_key");
+    if !is_admin(&admin) {
+        revert(ContractError::AdminDoesntExist);
+    };
+
+    // Make sure the last admin can't remove itself.
+    let admins_count: u32 = get_key("admins_count");
+    if admins_count == 1 {
+        revert(ContractError::AdminCountToLow);
+    }
+
+    // Decrement admins count.
+    set_key("admins_count", admins_count - 1);
+
+    // Remove admin from the admins list.
+    runtime::remove_key(&admin_pubkey_to_string(&admin));
+}
+
 // Utility functions
+
+/// Check if given account is an admin.
+fn is_admin(account: &PublicKey) -> bool {
+    runtime::has_key(&admin_pubkey_to_string(&account))
+}
+
+/// Check if the caller has admin rights.
+/// Revert otherwise.
+fn assert_admin_rights() {
+    let admin = runtime::get_caller();
+    let has_key = runtime::has_key(&admin_account_hash_to_string(&admin));
+    if !has_key {
+        revert(ContractError::PermissionDenied);
+    };
+}
+
+/// Retrieve admins named key from account hash.
+fn admin_account_hash_to_string(account_hash: &AccountHash) -> String {
+    format!("admin-{}", account_hash.to_string())
+}
+
+/// Retrieve admins named key from public key.
+fn admin_pubkey_to_string(pubkey: &PublicKey) -> String {
+    admin_account_hash_to_string(&pubkey.to_account_hash())
+}
 
 /// Retrieve AccountHash from public key.
 fn pubkey_to_string(pubkey: &PublicKey) -> String {
