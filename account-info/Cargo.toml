@@ -16,5 +16,12 @@ bench = false
 doctest = false
 test = false
 
+[[bin]]
+name = "call-set-url"
+path = "src/call_set_url.rs"
+bench = false
+doctest = false
+test = false
+
 [features]
 default = ["contract/std", "types/std"]

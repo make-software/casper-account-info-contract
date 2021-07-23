@@ -23,8 +23,8 @@ impl Admins {
         }
     }
 
-    pub fn is_admin(&self, address: &AccountHash) -> bool {
-        let result: Option<bool> = storage::dictionary_get(self.dict_uref, &address.to_string())
+    pub fn is_admin(&self, account: &AccountHash) -> bool {
+        let result: Option<bool> = storage::dictionary_get(self.dict_uref, &account.to_string())
             .unwrap_or_revert();
         match result {
             Some(value) => value == ADMIN_ACTIVE,
@@ -32,11 +32,11 @@ impl Admins {
         }
     }
 
-    pub fn add(&self, address: &AccountHash) {
-        if self.is_admin(address) {
+    pub fn add(&self, account: &AccountHash) {
+        if self.is_admin(account) {
             runtime::revert(ContractError::AdminExists);
         } else {
-            storage::dictionary_put(self.dict_uref, &address.to_string(), ADMIN_ACTIVE);
+            storage::dictionary_put(self.dict_uref, &account.to_string(), ADMIN_ACTIVE);
             
             // Increment the admin count.
             let admins_count: u32 = utils::get_key(ADMINS_COUNT);
@@ -44,7 +44,7 @@ impl Admins {
         }
     }
 
-    pub fn disable(&self, address: &AccountHash) {
+    pub fn disable(&self, account: &AccountHash) {
         // Make sure the last admin can't remove itself.
         let admins_count: u32 = utils::get_key(ADMINS_COUNT);
         if admins_count == 1 {
@@ -54,21 +54,16 @@ impl Admins {
         // Decrement admins count.
         utils::set_key(ADMINS_COUNT, admins_count - 1);
 
-        if self.is_admin(address) {
-            storage::dictionary_put(self.dict_uref, &address.to_string(), ADMIN_DISABLED);
+        if self.is_admin(account) {
+            storage::dictionary_put(self.dict_uref, &account.to_string(), ADMIN_DISABLED);
         } else {
             runtime::revert(ContractError::AdminDoesntExist);
         }
     }
 
     pub fn assert_caller_is_admin(&self) {
-        match utils::get_caller() {
-            None => runtime::revert(ContractError::CallerIsNotAccount),
-            Some(account) => {
-                if !self.is_admin(&account) {
-                    runtime::revert(ContractError::PermissionDenied)
-                }
-            }
+        if !self.is_admin(&utils::get_caller()) {
+            runtime::revert(ContractError::PermissionDenied);
         }
     }
 }

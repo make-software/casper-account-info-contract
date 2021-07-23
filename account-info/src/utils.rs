@@ -6,8 +6,10 @@ use contract::{
 };
 use types::{CLTyped, account::AccountHash, bytesrepr::{FromBytes, ToBytes}, system::CallStackElement};
 
-pub fn get_caller() -> Option<AccountHash> {
-    match runtime::get_call_stack().first().unwrap() {
+use crate::ContractError;
+
+pub fn get_caller() -> AccountHash {
+    let maybe_account = match runtime::get_call_stack().first().unwrap() {
         CallStackElement::Session { account_hash }  => {
             Some(*account_hash)
         },
@@ -17,7 +19,8 @@ pub fn get_caller() -> Option<AccountHash> {
         CallStackElement::StoredContract { contract_package_hash: _, contract_hash: _ } => {
             None
         }
-    }
+    };
+    maybe_account.unwrap_or_revert_with(ContractError::CallerIsNotAccount)
 }
 
 /// Getter function from context storage.

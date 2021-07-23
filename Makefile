@@ -21,6 +21,6 @@ clean:
 	rm ./tests/wasm/*
 
 copy-wasm-file-to-test:
-	cp target/wasm32-unknown-unknown/release/account-info.wasm tests/wasm
+	cp target/wasm32-unknown-unknown/release/*.wasm tests/wasm
 
 test: build-contract copy-wasm-file-to-test test-only
