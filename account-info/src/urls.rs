@@ -1,11 +1,14 @@
-use contract::{contract_api::{runtime, storage}, unwrap_or_revert::UnwrapOrRevert};
-use types::{Key, URef, account::AccountHash};
 use super::ContractError;
+use contract::{
+    contract_api::{runtime, storage},
+    unwrap_or_revert::UnwrapOrRevert,
+};
+use types::{account::AccountHash, Key, URef};
 
 pub const URLS_DICT: &str = "urls";
 
 pub struct Urls {
-    dict_uref: URef
+    dict_uref: URef,
 }
 
 impl Urls {
@@ -13,7 +16,7 @@ impl Urls {
         let dict_key: Key = runtime::get_key(URLS_DICT).unwrap_or_revert();
         let dict_uref: &URef = dict_key.as_uref().unwrap_or_revert();
         Urls {
-            dict_uref: *dict_uref
+            dict_uref: *dict_uref,
         }
     }
 
@@ -23,19 +26,13 @@ impl Urls {
         }
         storage::dictionary_put(self.dict_uref, &address.to_string(), url);
     }
-    
+
     pub fn delete(&self, address: &AccountHash) {
         storage::dictionary_put(self.dict_uref, &address.to_string(), "");
     }
 
-    pub fn get(&self, address: &AccountHash) -> String {
-        let url: String = storage::dictionary_get(self.dict_uref, &address.to_string())
-            .unwrap_or_revert()
-            .unwrap_or_revert_with(ContractError::NotFound);
-        if url.is_empty() {
-            runtime::revert(ContractError::NotFound)
-        };
-        url
+    pub fn get(&self, address: &AccountHash) -> Option<String> {
+        storage::dictionary_get(self.dict_uref, &address.to_string()).unwrap_or_revert()
     }
 }
 

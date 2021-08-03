@@ -11,14 +11,7 @@ hex = "0.4.3"
 
 [[bin]]
 name = "account-info"
-path = "src/main.rs"
-bench = false
-doctest = false
-test = false
-
-[[bin]]
-name = "call-set-url"
-path = "src/call_set_url.rs"
+path = "src/contract.rs"
 bench = false
 doctest = false
 test = false

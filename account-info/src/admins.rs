@@ -1,5 +1,8 @@
-use contract::{contract_api::{runtime, storage}, unwrap_or_revert::UnwrapOrRevert};
-use types::{Key, URef, account::AccountHash};
+use contract::{
+    contract_api::{runtime, storage},
+    unwrap_or_revert::UnwrapOrRevert,
+};
+use types::{account::AccountHash, Key, URef};
 
 use crate::utils;
 
@@ -11,7 +14,7 @@ pub const ADMIN_ACTIVE: bool = true;
 pub const ADMIN_DISABLED: bool = false;
 
 pub struct Admins {
-    dict_uref: URef
+    dict_uref: URef,
 }
 
 impl Admins {
@@ -19,16 +22,16 @@ impl Admins {
         let dict_key: Key = runtime::get_key(ADMINS_DICT).unwrap_or_revert();
         let dict_uref: &URef = dict_key.as_uref().unwrap_or_revert();
         Admins {
-            dict_uref: *dict_uref
+            dict_uref: *dict_uref,
         }
     }
 
     pub fn is_admin(&self, account: &AccountHash) -> bool {
-        let result: Option<bool> = storage::dictionary_get(self.dict_uref, &account.to_string())
-            .unwrap_or_revert();
+        let result: Option<bool> =
+            storage::dictionary_get(self.dict_uref, &account.to_string()).unwrap_or_revert();
         match result {
             Some(value) => value == ADMIN_ACTIVE,
-            None => false
+            None => false,
         }
     }
 
@@ -37,16 +40,16 @@ impl Admins {
             runtime::revert(ContractError::AdminExists);
         } else {
             storage::dictionary_put(self.dict_uref, &account.to_string(), ADMIN_ACTIVE);
-            
+
             // Increment the admin count.
-            let admins_count: u32 = utils::get_key(ADMINS_COUNT);
+            let admins_count: u32 = utils::get_key(ADMINS_COUNT).unwrap_or_revert();
             utils::set_key(ADMINS_COUNT, admins_count + 1);
         }
     }
 
     pub fn disable(&self, account: &AccountHash) {
         // Make sure the last admin can't remove itself.
-        let admins_count: u32 = utils::get_key(ADMINS_COUNT);
+        let admins_count: u32 = utils::get_key(ADMINS_COUNT).unwrap_or_revert();
         if admins_count == 1 {
             runtime::revert(ContractError::AdminCountToLow);
         }

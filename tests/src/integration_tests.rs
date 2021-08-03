@@ -1,7 +1,10 @@
 #[cfg(test)]
 mod tests {
     use casper_engine_test_support::{Code, Hash, SessionBuilder, TestContext, TestContextBuilder};
-    use casper_types::{CLTyped, Key, PublicKey, RuntimeArgs, SecretKey, U512, URef, account::AccountHash, bytesrepr::FromBytes, runtime_args};
+    use casper_types::{
+        account::AccountHash, bytesrepr::FromBytes, runtime_args, CLTyped, Key, PublicKey,
+        RuntimeArgs, SecretKey, URef, U512,
+    };
 
     pub struct AccountInfoContract {
         pub context: TestContext,
@@ -13,7 +16,7 @@ mod tests {
         pub user: AccountHash,
         pub user_pk: PublicKey,
         pub user_url: String,
-        pub deposit_amount: U512
+        pub deposit_amount: U512,
     }
 
     impl AccountInfoContract {
@@ -43,7 +46,10 @@ mod tests {
             context.run(session);
 
             let contract_hash = context
-                .query(admin_addr, &["account-info-latest-version-contract-hash".to_string()])
+                .query(
+                    admin_addr,
+                    &["account-info-latest-version-contract-hash".to_string()],
+                )
                 .unwrap()
                 .into_t()
                 .unwrap();
@@ -64,14 +70,20 @@ mod tests {
                 user: user_addr,
                 user_pk: user_key,
                 user_url: "http://localhost:80".to_string(),
-                deposit_amount: U512::from(2_000_000_000)
+                deposit_amount: U512::from(2_000_000_000),
             }
         }
 
         fn query<T: FromBytes + CLTyped>(&self, key: &str) -> T {
             println!("{:?}", key);
             self.context
-                .query(self.admin, &["account-info-latest-version-contract".to_string(), key.to_string()])
+                .query(
+                    self.admin,
+                    &[
+                        "account-info-latest-version-contract".to_string(),
+                        key.to_string(),
+                    ],
+                )
                 .unwrap()
                 .into_t()
                 .unwrap()
@@ -117,38 +129,14 @@ mod tests {
             );
         }
 
-        pub fn set_url_with_deposit(&mut self, caller: &AccountHash, url: &str, amount: U512) {
-            let session_code = Code::from("call-set-url.wasm");
-            let session_args = runtime_args! {
-                "url" => url,
-                "amount" => Some(amount),
-                "contract_address" => self.contract_package_hash
-            };
-            let session = SessionBuilder::new(session_code, session_args)
-                .with_address(*caller)
-                .with_authorization_keys(&[*caller])
-                .build();
-            self.context.run(session);
-        }
-
-        pub fn _set_url_with_deposit_via_hash(&mut self, caller: &AccountHash, url: &str, amount: U512) {
-            self.call(
-                caller,
-                "call_set_url",
-                runtime_args! {
-                    "url" => url,
-                    "amount" => Some(amount),
-                    "contract_address" => self.contract_package_hash
-                }
-            );
-        }
-
         pub fn delete_url(&mut self, caller: &AccountHash) {
             self.call(caller, "delete_url", runtime_args! {});
         }
 
         pub fn get_url(&self, account: &AccountHash) -> String {
-            let url: String = self.query_dictionary_value("urls", &account.to_string()).unwrap();
+            let url: String = self
+                .query_dictionary_value("urls", &account.to_string())
+                .unwrap();
             if url.is_empty() {
                 panic!("ValueNotFound");
             } else {
@@ -167,7 +155,7 @@ mod tests {
                 "set_url_for_account",
                 runtime_args! {
                     "url" => url,
-                    "account" => account.clone(),
+                    "account" => *account,
                 },
             );
         }
@@ -177,7 +165,7 @@ mod tests {
                 caller,
                 "delete_url_for_account",
                 runtime_args! {
-                    "account" => account.clone(),
+                    "account" => *account,
                 },
             );
         }
@@ -187,7 +175,7 @@ mod tests {
                 caller,
                 "add_admin",
                 runtime_args! {
-                    "account" => account.clone(),
+                    "account" => *account,
                 },
             );
         }
@@ -197,17 +185,7 @@ mod tests {
                 caller,
                 "disable_admin",
                 runtime_args! {
-                    "account" => account.clone(),
-                },
-            );
-        }
-
-        pub fn set_deposit_amount(&mut self, caller: &AccountHash, amount: U512) {
-            self.call(
-                caller,
-                "set_deposit_amount",
-                runtime_args! {
-                    "amount" => amount.clone(),
+                    "account" => *account,
                 },
             );
         }
@@ -220,16 +198,6 @@ mod tests {
             let value: Option<bool> = self.query_dictionary_value("admins", &account.to_string());
             value.unwrap_or(false)
         }
-
-        pub fn user_deposit(&self, account: &AccountHash) -> U512 {
-            self.query_dictionary_value("deposits", &account.to_string())
-                .unwrap_or_default()
-        }
-
-        pub fn deposit_amount(&self) -> U512 {
-            self.query("deposit_amount")
-        }
-
     }
 
     #[test]
@@ -240,14 +208,11 @@ mod tests {
         // Set URL of the user.
         let user = contract.user;
         let url = contract.user_url.clone();
-        // contract.set_url_with_deposit_via_hash(&user, &url, contract.deposit_amount);
-        contract.set_url_with_deposit(&user, &url, contract.deposit_amount);
+        // contract.set_url_via_hash(&user, &ur);
+        contract.set_url(&user, &url);
 
         // Check if we have stored the URL.
         assert_eq!(url, contract.get_url(&user));
-
-        // Check if the deposit is recorded.
-        assert_eq!(contract.deposit_amount, contract.user_deposit(&user));
 
         // Override the URL.
         let new_url = String::from("http://test.com");
@@ -266,13 +231,10 @@ mod tests {
         // Set URL of the user.
         let user = contract.user;
         let url = contract.user_url.clone();
-        contract.set_url_with_deposit(&user, &url, contract.deposit_amount);
+        contract.set_url(&user, &url);
 
         // Delete URL of the user
         contract.delete_url(&user);
-
-        // Check if the deposit is zero.
-        assert!(contract.user_deposit(&user).is_zero());
 
         // This call will panic as we have deleted the URL belonging to the user and as such there is no data.
         contract.get_url(&user);
@@ -286,7 +248,7 @@ mod tests {
         // User sets their URL.
         let user = contract.user;
         let url = contract.user_url.clone();
-        contract.set_url_with_deposit(&user, &url, contract.deposit_amount);
+        contract.set_url(&user, &url);
 
         // Change the URL of the user to that of the admin
         let admin = contract.admin;
@@ -306,7 +268,7 @@ mod tests {
         // User sets their URL.
         let user = contract.user;
         let url = contract.user_url.clone();
-        contract.set_url_with_deposit(&user, &url, contract.deposit_amount);
+        contract.set_url(&user, &url);
 
         // Change the URL of the user to that of the admin
         let admin = contract.admin;
@@ -318,12 +280,12 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn test_set_url_security() {
+    fn test_set_url_for_account_security() {
         // Deploy contract.
         let mut contract = AccountInfoContract::deploy();
         let user = contract.user;
         let user_url = contract.user_url.clone();
-        let admin = contract.admin.clone();
+        let admin = contract.admin;
 
         // Should fail, as the user doesn't have admin rights.
         contract.set_url_for_account(&user, &admin, &user_url);
@@ -339,7 +301,7 @@ mod tests {
         let admin_url = contract.admin_url.clone();
 
         // Admin sets their URL.
-        contract.set_url_with_deposit(&user, &admin_url, contract.deposit_amount);
+        contract.set_url(&user, &admin_url);
 
         // Check if we have stored the URL.
         assert_eq!(admin_url, contract.get_url(&admin));
@@ -431,28 +393,6 @@ mod tests {
 
         // Should fail, as the user doesn't have admin rights.
         contract.add_admin(&user, &user);
-    }
-
-    #[test]
-    fn test_set_deposit() {
-        let mut contract = AccountInfoContract::deploy();
-        let admin = contract.admin;
-        assert_eq!(contract.deposit_amount, contract.deposit_amount());
-        
-        let new_amount = U512::from(100);
-        contract.set_deposit_amount(&admin, new_amount);
-        assert_eq!(new_amount, contract.deposit_amount());
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_set_deposit_security() {
-        let mut contract = AccountInfoContract::deploy();
-        let user = contract.user;
-        let new_amount = U512::from(100);
-
-        // Should fail, as the user doesn't have admin rights.
-        contract.set_deposit_amount(&user, new_amount);
     }
 }
 

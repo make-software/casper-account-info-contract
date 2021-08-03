@@ -1,22 +1,22 @@
 extern crate alloc;
 
-use contract::{contract_api::{account, runtime, storage, system}, unwrap_or_revert::UnwrapOrRevert};
-use types::{CLTyped, RuntimeArgs, U512, URef, account::AccountHash, contracts::NamedKeys, runtime_args};
+use contract::{
+    contract_api::{runtime, storage},
+    unwrap_or_revert::UnwrapOrRevert,
+};
+use types::{account::AccountHash, contracts::NamedKeys, CLTyped};
 
 use types::{
-    contracts::ContractPackageHash,
-    ApiError, CLType, CLValue, EntryPoint, EntryPointAccess, EntryPointType, EntryPoints,
-    Parameter,
+    contracts::ContractPackageHash, ApiError, CLType, CLValue, EntryPoint, EntryPointAccess,
+    EntryPointType, EntryPoints, Parameter,
 };
 
 mod admins;
 mod urls;
 mod utils;
-mod deposits;
 
 use admins::Admins;
 use urls::Urls;
-use deposits::Deposits;
 
 #[derive(Debug)]
 pub enum ContractError {
@@ -28,9 +28,7 @@ pub enum ContractError {
     AdminExists = 6,
     AdminDoesntExist = 7,
     CallerIsNotAccount = 8,
-    IncorrectDepositAmount = 9,
-    PurseIsNone = 10,
-    NoDeposit = 11
+    ReadingCallerError = 9,
 }
 
 impl From<ContractError> for ApiError {
@@ -38,19 +36,6 @@ impl From<ContractError> for ApiError {
         ApiError::User(err as u16)
     }
 }
-
-/*
-Register your entrypoints (contract methods) here.
-
-Every entrypoint consists of:
-- name of the function entry point it tries to load
-- list of params: Vec<Parameter>
-- return type: CLType
-- access type: Public or group limited
-- contract context type: Contract or Session(callers account)
-
-For more, see: https://docs.rs/casper-types/1.2.0/casper_types/contracts/struct.EntryPoint.html
-*/
 
 /// Returns the list of the entry points in the contract with added group security.
 pub fn get_entry_points() -> EntryPoints {
@@ -61,16 +46,6 @@ pub fn get_entry_points() -> EntryPoints {
         CLType::Unit,
         EntryPointAccess::Public,
         EntryPointType::Contract,
-    ));
-    entry_points.add_entry_point(EntryPoint::new(
-        "call_set_url",
-        vec![
-            Parameter::new("url", CLType::String),
-            Parameter::new("purse", CLType::URef),
-        ],
-        CLType::Unit,
-        EntryPointAccess::Public,
-        EntryPointType::Session,
     ));
     entry_points.add_entry_point(EntryPoint::new(
         "get_url",
@@ -118,8 +93,15 @@ pub fn get_entry_points() -> EntryPoints {
         EntryPointType::Contract,
     ));
     entry_points.add_entry_point(EntryPoint::new(
-        "set_deposit_amount",
-        vec![Parameter::new("amount", CLType::U512)],
+        "burn_one_cspr",
+        vec![],
+        CLType::Unit,
+        EntryPointAccess::Public,
+        EntryPointType::Contract,
+    ));
+    entry_points.add_entry_point(EntryPoint::new(
+        "set_cspr_to_burn",
+        vec![Parameter::new("cspr_to_burn", CLType::U32)],
         CLType::Unit,
         EntryPointAccess::Public,
         EntryPointType::Contract,
@@ -140,61 +122,55 @@ pub fn install_or_upgrade_contract(name: String) {
             None => {
                 let (contract_package_hash, access_token) =
                     storage::create_contract_package_at_hash();
-                runtime::put_key(
-                    &format!("{}-package", name),
-                    contract_package_hash.into(),
-                );
+                runtime::put_key(&format!("{}-package", name), contract_package_hash.into());
                 runtime::put_key(
                     &format!("{}-package-access-uref", name),
-                    access_token.into()
+                    access_token.into(),
                 );
                 runtime::put_key(
                     &format!("{}-package-hash", name),
-                    storage::new_uref(contract_package_hash).into()
+                    storage::new_uref(contract_package_hash).into(),
                 );
 
                 // Add deployer as the first admin.
                 let admin = utils::get_caller();
                 let admins_dict = storage::new_dictionary(admins::ADMINS_DICT).unwrap_or_revert();
-                storage::dictionary_put(
-                    admins_dict, 
-                    &admin.to_string(), 
-                    admins::ADMIN_ACTIVE
-                );
+                storage::dictionary_put(admins_dict, &admin.to_string(), admins::ADMIN_ACTIVE);
                 named_keys.insert(admins::ADMINS_DICT.to_string(), admins_dict.into());
-                named_keys.insert(admins::ADMINS_COUNT.to_string(), storage::new_uref(1u32).into());
-                
+                named_keys.insert(
+                    admins::ADMINS_COUNT.to_string(),
+                    storage::new_uref(1u32).into(),
+                );
+
                 // Add empty dictionary for urls.
                 let urls_dict = storage::new_dictionary(urls::URLS_DICT).unwrap_or_revert();
                 named_keys.insert(urls::URLS_DICT.to_string(), urls_dict.into());
-                
-                // Add empty dictionary for deposits.
-                let urls_dict = storage::new_dictionary(deposits::DEPOSITS_DICT).unwrap_or_revert();
-                named_keys.insert(deposits::DEPOSITS_DICT.to_string(), urls_dict.into());
 
-                // Add empty purse.
-                let purse: URef = system::create_purse();
-                named_keys.insert(deposits::PURSE.to_string(), purse.into());
+                // Set initial gas_burn to 10 CSPR.
+                named_keys.insert("cspr_to_burn".to_string(), storage::new_uref(10u32).into());
 
-                // Set initial deposit amount to 2 CSPR.
-                let deposit_amount = U512::from(2_000_000_000);
-                named_keys.insert(deposits::DEPOSIT_AMOUNT.to_string(), storage::new_uref(deposit_amount).into());
+                // Store package hash.
+                named_keys.insert(
+                    "package_hash".to_string(),
+                    storage::new_uref(contract_package_hash).into(),
+                );
 
                 contract_package_hash
             }
         };
+
     let entry_points = get_entry_points();
     let (contract_hash, _) =
         storage::add_contract_version(contract_package_hash, entry_points, named_keys);
-    
+
     runtime::put_key(
         &format!("{}-latest-version-contract", name),
-        contract_hash.into()
+        contract_hash.into(),
     );
 
     runtime::put_key(
         &format!("{}-latest-version-contract-hash", name),
-        storage::new_uref(contract_hash).into()
+        storage::new_uref(contract_hash).into(),
     );
 }
 
@@ -206,35 +182,33 @@ pub fn install_or_upgrade_contract(name: String) {
 fn set_url() {
     let caller = utils::get_caller();
     let url: String = runtime::get_named_arg("url");
-    let purse: Option<URef> = runtime::get_named_arg("purse");
-    Deposits::new().deposit_if_needed(&caller, purse);
+    let urls = Urls::new();
+    let first_time = urls.get(&caller).is_none();
+
+    // Burn CSPR if never done that before.
+    if first_time {
+        let package_hash: ContractPackageHash = utils::get_key("package_hash").unwrap_or_revert();
+        let cspr_to_burn: u32 = utils::get_key("cspr_to_burn").unwrap_or_revert();
+        for _ in 0..cspr_to_burn {
+            let _: Vec<u8> = runtime::call_versioned_contract(
+                package_hash,
+                None,
+                "burn_one_cspr",
+                Default::default(),
+            );
+        }
+    }
+
     Urls::new().set(&caller, &url);
 }
-
-#[no_mangle]
-fn call_set_url() {
-    let url: String = runtime::get_named_arg("url");
-    let amount: Option<U512> = runtime::get_named_arg("amount");
-    let contract_address: ContractPackageHash = runtime::get_named_arg("contract_address");
-
-    let purse = amount.map(|amount| {
-        let purse = system::create_purse();
-        system::transfer_from_purse_to_purse(account::get_main_purse(), purse, amount, None)
-            .unwrap_or_revert();
-        purse
-    });
-    
-    let _: () = runtime::call_versioned_contract(contract_address, None, "set_url", runtime_args!{
-        "url" => url,
-        "purse" => purse
-    });
-} 
 
 /// Getter function for stored URLs. Returns data stored under the `account` argument.
 #[no_mangle]
 fn get_url() {
     let account = runtime::get_named_arg::<AccountHash>("account");
-    let url = Urls::new().get(&account);
+    let url = Urls::new()
+        .get(&account)
+        .unwrap_or_revert_with(ContractError::NotFound);
     runtime::ret(CLValue::from_t(url).unwrap_or_revert());
 }
 
@@ -243,7 +217,6 @@ fn get_url() {
 fn delete_url() {
     let caller = utils::get_caller();
     Urls::new().delete(&caller);
-    Deposits::new().withdraw(&caller);
 }
 
 /// Administrator function that can create new or overwrite already existing urls stored under `PublicKey`es.
@@ -251,7 +224,6 @@ fn delete_url() {
 #[no_mangle]
 fn set_url_for_account() {
     Admins::new().assert_caller_is_admin();
-
     let url: String = runtime::get_named_arg("url");
     let account = runtime::get_named_arg("account");
     Urls::new().set(&account, &url);
@@ -261,10 +233,8 @@ fn set_url_for_account() {
 #[no_mangle]
 fn delete_url_for_account() {
     Admins::new().assert_caller_is_admin();
-
     let account = runtime::get_named_arg("account");
     Urls::new().delete(&account);
-    Deposits::new().withdraw(&account);
 }
 
 /// Administrator function to add another administrators.
@@ -272,7 +242,6 @@ fn delete_url_for_account() {
 fn add_admin() {
     let admins = Admins::new();
     admins.assert_caller_is_admin();
-
     let account = runtime::get_named_arg("account");
     admins.add(&account);
 }
@@ -286,9 +255,18 @@ fn disable_admin() {
     admins.disable(&account);
 }
 
+/// Adminstrator function to change amount of CSPR to burn when
+/// calling set_url.
 #[no_mangle]
-fn set_deposit_amount() {
+fn set_cspr_to_burn() {
     Admins::new().assert_caller_is_admin();
-    let amount = runtime::get_named_arg("amount");
-    Deposits::new().set_deposit_amount(amount)
+    let cspr_to_burn: u32 = runtime::get_named_arg("cspr_to_burn");
+    utils::set_key("cspr_to_burn", cspr_to_burn);
+}
+
+/// Burn tokens.
+#[no_mangle]
+fn burn_one_cspr() {
+    let bytes = Vec::from([255u8; 1575]);
+    runtime::ret(CLValue::from_t(bytes).unwrap_or_revert());
 }
