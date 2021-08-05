@@ -13,24 +13,31 @@ use types::{
 
 use crate::ContractError;
 
+/// Get AccountHash of the caller. If the caller is StoredContract if fails.
 pub fn get_caller() -> AccountHash {
     let call_stack = runtime::get_call_stack();
-    let caller = call_stack
-        .first()
-        .unwrap_or_revert_with(ContractError::ReadingCallerError);
-    let maybe_account = match caller {
-        CallStackElement::Session { account_hash } => Some(*account_hash),
+    let caller = call_stack.get(call_stack.len() - 2);
+    element_to_account_hash(caller.unwrap_or_revert())
+}
+
+/// Get AccountHash of the deployer at the deployment stage.
+pub fn self_addr() -> AccountHash {
+    element_to_account_hash(runtime::get_call_stack().last().unwrap_or_revert())
+}
+
+fn element_to_account_hash(element: &CallStackElement) -> AccountHash {
+    match element {
+        CallStackElement::Session { account_hash } => (*account_hash).into(),
         CallStackElement::StoredSession {
             account_hash,
             contract_package_hash: _,
             contract_hash: _,
-        } => Some(*account_hash),
+        } => (*account_hash).into(),
         CallStackElement::StoredContract {
             contract_package_hash: _,
             contract_hash: _,
-        } => None,
-    };
-    maybe_account.unwrap_or_revert_with(ContractError::CallerIsNotAccount)
+        } => runtime::revert(ContractError::ReadingCallerError)
+    }
 }
 
 /// Getter function from context storage.

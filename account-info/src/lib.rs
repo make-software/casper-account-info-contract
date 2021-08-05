@@ -133,7 +133,7 @@ pub fn install_or_upgrade_contract(name: String) {
                 );
 
                 // Add deployer as the first admin.
-                let admin = utils::get_caller();
+                let admin = utils::self_addr();
                 let admins_dict = storage::new_dictionary(admins::ADMINS_DICT).unwrap_or_revert();
                 storage::dictionary_put(admins_dict, &admin.to_string(), admins::ADMIN_ACTIVE);
                 named_keys.insert(admins::ADMINS_DICT.to_string(), admins_dict.into());
