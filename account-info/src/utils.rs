@@ -27,16 +27,16 @@ pub fn self_addr() -> AccountHash {
 
 fn element_to_account_hash(element: &CallStackElement) -> AccountHash {
     match element {
-        CallStackElement::Session { account_hash } => (*account_hash).into(),
+        CallStackElement::Session { account_hash } => *account_hash,
         CallStackElement::StoredSession {
             account_hash,
             contract_package_hash: _,
             contract_hash: _,
-        } => (*account_hash).into(),
+        } => *account_hash,
         CallStackElement::StoredContract {
             contract_package_hash: _,
             contract_hash: _,
-        } => runtime::revert(ContractError::ReadingCallerError)
+        } => runtime::revert(ContractError::ReadingCallerError),
     }
 }
 
