@@ -147,7 +147,7 @@ pub fn install_or_upgrade_contract(name: String) {
                 named_keys.insert(urls::URLS_DICT.to_string(), urls_dict.into());
 
                 // Set initial gas_burn to 10 CSPR.
-                named_keys.insert("cspr_to_burn".to_string(), storage::new_uref(10u32).into());
+                named_keys.insert("cspr_to_burn".to_string(), storage::new_uref(9u32).into());
 
                 // Store package hash.
                 named_keys.insert(
