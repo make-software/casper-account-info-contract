@@ -135,7 +135,7 @@ mod tests {
 
         pub fn get_url(&self, account: &AccountHash) -> String {
             let url: String = self
-                .query_dictionary_value("urls", &account.to_string())
+                .query_dictionary_value("account-info-urls", &account.to_string())
                 .unwrap();
             if url.is_empty() {
                 panic!("ValueNotFound");
@@ -195,7 +195,7 @@ mod tests {
         }
 
         pub fn is_admin(&self, account: &AccountHash) -> bool {
-            let value: Option<bool> = self.query_dictionary_value("admins", &account.to_string());
+            let value: Option<bool> = self.query_dictionary_value("account-info-admins", &account.to_string());
             value.unwrap_or(false)
         }
     }

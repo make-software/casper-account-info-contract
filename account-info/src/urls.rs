@@ -5,7 +5,7 @@ use contract::{
 };
 use types::{account::AccountHash, Key, URef};
 
-pub const URLS_DICT: &str = "urls";
+pub const URLS_DICT: &str = "account-info-urls";
 
 pub struct Urls {
     dict_uref: URef,

@@ -8,7 +8,7 @@ use crate::utils;
 
 use super::ContractError;
 
-pub const ADMINS_DICT: &str = "admins";
+pub const ADMINS_DICT: &str = "account-info-admins";
 pub const ADMINS_COUNT: &str = "admins_count";
 pub const ADMIN_ACTIVE: bool = true;
 pub const ADMIN_DISABLED: bool = false;
