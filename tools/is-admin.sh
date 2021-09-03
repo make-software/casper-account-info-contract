@@ -15,8 +15,6 @@ print_usage () {
   echo "DEPENDENCIES:"
   echo "  casper-client    To make RPC requests to the network"
   echo "  jq               To parse RPC responses"
-  echo "  curl             To fetch account information"
-  echo "  sed              To manipulate strings"
 }
 
 ensure_has_installed () {
@@ -28,9 +26,7 @@ ensure_has_installed () {
 }
 
 ensure_has_installed "casper-client"
-ensure_has_installed "curl"
 ensure_has_installed "jq"
-ensure_has_installed "sed"
 
 while [ $# -gt 0 ]; do
   case "$1" in
