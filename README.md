@@ -2,13 +2,387 @@
 
 Casper Account Info Contract allows account owners to provide information about themselves to the public by specifying a URL to a [Casper Account Info Standard](https://github.com/make-software/casper-account-info-standard) file.   
 
-## Setup
+## Interacting with the contract
+
+You need to have ```casper-client``` and ```jq``` installed on your system to run the examples. The commands below were tested on Ubuntu 20.04.2 LTS.
+
+### As Casper account owner
+
+Please set the following environment variables, which are reused across the examples:
+
+```bash
+NODE_ADDRESS=127.0.0.1
+CHAIN_NAME=$(curl -s http://$NODE_ADDRESS:8888/status | jq -r '.chainspec_name')
+ACCOUNT_KEYS_PATH=/etc/casper/validator_keys
+ACCOUNT_INFO_CONTRACT_HASH=2f36a35edcbaabe17aba805e3fae42699a2bb80c2e0c15189756fdc4895356f8
+```
+
+The values provided above assume that you are running commands on your validator node.
+
+#### Set URL for your account
+
+> **Payment:** The ```set_url``` entry point call payment should be 10 CSPR. The deploy may fail with an "Out of gas" error if a smaller amount provided. For the consecutive ```set_url``` calls the advised payment amount is 0.5 CSPR
+
+The command below sets the top level domain URL for an account information file hosted at [https://casper-account-info-example.make.services/.well-known/casper/account-info.casper-test.json](https://casper-account-info-example.make.services/.well-known/casper/account-info.casper-test.json).
+
+```bash
+sudo -u casper casper-client put-deploy \
+    --chain-name "$CHAIN_NAME" \
+    --node-address "http://$NODE_ADDRESS:7777/" \
+    --secret-key "$ACCOUNT_KEYS_PATH/secret_key.pem" \
+    --session-hash "$ACCOUNT_INFO_CONTRACT_HASH" \
+    --session-entry-point "set_url" \
+    --payment-amount 10000000000 \
+    --gas-price=1 \
+    --session-arg=url:"string='https://casper-account-info-example.make.services'"
+```
+
+#### Delete the URL previously set for your account
+
+> **Payment:** The advised payments for the ```delete_url``` entry point call is 0.5 CSPR. The deploy may fail with an "Out of gas" error if a smaller amount provided.
+
+```bash
+sudo -u casper casper-client put-deploy \
+    --chain-name "$CHAIN_NAME" \
+    --node-address "http://$NODE_ADDRESS:7777/" \
+    --secret-key "$ACCOUNT_KEYS_PATH/secret_key.pem" \
+    --session-hash "$ACCOUNT_INFO_CONTRACT_HASH" \
+    --session-entry-point "delete_url" \
+    --payment-amount 500000000 \
+    --gas-price=1
+```
+
+#### Get the URL set for an account
+
+##### Using ```casper-client```
+
+The URL string get be received by querying the ```account-info-urls``` dictionary key named as the corresponding account hash, which can be accessed by URef with the same name stored under the contract named keys.
+
+###### Get the ```account-info-contract-url``` dictionary URef
+
+```bash
+ACCOUNT_INFO_URLS_DICT_UREF=$(casper-client query-state \
+  --node-address http://$NODE_ADDRESS:7777 \
+  --state-root-hash "$STATE_ROOT_HASH" \
+  --key "hash-$ACCOUNT_INFO_CONTRACT_HASH" \
+| jq -rc '.result | .stored_value | .Contract | .named_keys | map(select(.name | contains("account-info-urls"))) | .[] .key')
+```
+
+###### Query the dictionary 
+
+```bash
+PUBLIC_KEY=<put here the public key you want to query URL for>
+
+casper-client get-dictionary-item \
+  --node-address http://$NODE_ADDRESS:7777 \
+  --state-root-hash "$STATE_ROOT_HASH" \
+  --seed-uref  "$ACCOUNT_INFO_URLS_DICT_UREF" \
+  --dictionary-item-key "$(casper-client account-address -p $PUBLIC_KEY | sed -r 's/account-hash-//g')"
+```
+
+##### Using the ```tools/get-account-info-url.sh``` and ```tools/get-account-info.sh``` scripts
+
+###### Get the URL
+
+```bash
+./get-account-info-url.sh --node-address=$NODE_ADDRESS --contract-hash=$ACCOUNT_INFO_CONTRACT_HASH --public_key=$PUBLIC_KEY
+```
+
+###### Get the account information file content
+
+```bash
+./get-account-info.sh --node-address=$NODE_ADDRESS --contract-hash=$ACCOUNT_INFO_CONTRACT_HASH --public_key=$PUBLIC_KEY
+```
+
+You can query the specific fields with ```jq```. The command below print the public key owner name:
+
+```bash
+./get-account-info.sh --node-address=$NODE_ADDRESS --contract-hash=$ACCOUNT_INFO_CONTRACT_HASH --public_key=$PUBLIC_KEY | jq -r '.owner | .name'
+```
+
+### As the contract admin 
+
+Please set the following environment variables, which are reused across the examples:
+
+```bash
+NODE_ADDRESS=127.0.0.1
+CHAIN_NAME=$(curl -s http://$NODE_ADDRESS:8888/status | jq -r '.chainspec_name')
+CONTRACT_OWNER_KEYS_PATH=/etc/casper/validator_keys
+ACCOUNT_INFO_CONTRACT_HASH=2f36a35edcbaabe17aba805e3fae42699a2bb80c2e0c15189756fdc4895356f8
+```
+
+The values provided above assume that you are running commands on your node instance.
+
+#### Set URL for account
+
+> **Payment:** The advised payments for the ```set_url_for_account``` entry point call is 0.5 CSPR. The deploy may fail with an "Out of gas" error if a smaller amount provided.
+
+```
+PUBLIC_KEY=<put here the public key you want to set URL for>
+
+casper-client put-deploy \
+    --chain-name "$CHAIN_NAME" \
+    --node-address "http://$NODE_ADDRESS:7777/" \
+    --secret-key "$CONTRACT_OWNER_KEYS_PATH/secret_key.pem" \
+    --session-hash "$ACCOUNT_INFO_CONTRACT_HASH" \
+    --session-entry-point "set_url_for_account" \
+    --payment-amount 500000000 \
+    --gas-price=1 \
+    --session-arg=account:"account_hash='$(casper-client account-address -p $PUBLIC_KEY)'" \
+    --session-arg=url:"string='https://casper-account-info-example.make.services'"
+```
+
+#### Delete URL for account
+
+> **Payment:** The advised payments for the ```delete_url_for_account``` entry point call is 0.5 CSPR. The deploy may fail with an "Out of gas" error if a smaller amount provided.
+
+```
+PUBLIC_KEY=<put here the public key you want to delete URL for>
+
+casper-client put-deploy \
+    --chain-name "$CHAIN_NAME" \
+    --node-address "http://$NODE_ADDRESS:7777/" \
+    --secret-key "$CONTRACT_OWNER_KEYS_PATH/secret_key.pem" \
+    --session-hash "$ACCOUNT_INFO_CONTRACT_HASH" \
+    --session-entry-point "delete_url_for_account" \
+    --payment-amount 500000000 \
+    --gas-price=1 \
+    --session-arg=account:"account_hash='$(casper-client account-address -p $PUBLIC_KEY)'"
+```
+
+#### Add account as an admin
+
+> **Payment:** The advised payments for the ```add_admin``` entry point call is 0.5 CSPR. The deploy may fail with an "Out of gas" error if a smaller amount provided.
+
+```
+PUBLIC_KEY=<put here the public key of the account your want to make an admin>
+
+casper-client put-deploy \
+    --chain-name "$CHAIN_NAME" \
+    --node-address "http://$NODE_ADDRESS:7777/" \
+    --secret-key "$CONTRACT_OWNER_KEYS_PATH/secret_key.pem" \
+    --session-hash "$ACCOUNT_INFO_CONTRACT_HASH" \
+    --session-entry-point "add_admin" \
+    --payment-amount 500000000 \
+    --gas-price=1 \
+    --session-arg=account:"account_hash='$(casper-client account-address -p $PUBLIC_KEY)'"
+```
+
+#### Disable admin account
+
+> **Payment:** The advised payments for the ```disable_admin``` entry point call is 0.5 CSPR. The deploy may fail with an "Out of gas" error if a smaller amount provided.
+
+```
+PUBLIC_KEY=<put here the public key of the admin account your want to disable>
+
+casper-client put-deploy \
+    --chain-name "$CHAIN_NAME" \
+    --node-address "http://$NODE_ADDRESS:7777/" \
+    --secret-key "$CONTRACT_OWNER_KEYS_PATH/secret_key.pem" \
+    --session-hash "$ACCOUNT_INFO_CONTRACT_HASH" \
+    --session-entry-point "disable_admin" \
+    --payment-amount 500000000 \
+    --gas-price=1 \
+    --session-arg=account:"account_hash='$(casper-client account-address -p $PUBLIC_KEY)'"
+```
+
+#### Set amount of CSPR to burn during the first ```set_url``` call
+
+To avoid spamming the contract with URL entries the first ```set_url``` for an account will burn an amount of CSPR specified in the contract configuration (default is 9 CSPR). This entry point changes that amount.
+
+> **Payment:** The advised payments for the ```set_cspr_to_burn``` entry point call is 0.5 CSPR. The deploy may fail with an "Out of gas" error if a smaller amount provided.
+
+```
+PUBLIC_KEY=<put here the public key of the admin account your want to disable>
+
+casper-client put-deploy \
+    --chain-name "$CHAIN_NAME" \
+    --node-address "http://$NODE_ADDRESS:7777/" \
+    --secret-key "$CONTRACT_OWNER_KEYS_PATH/secret_key.pem" \
+    --session-hash "$ACCOUNT_INFO_CONTRACT_HASH" \
+    --session-entry-point "set_cspr_to_burn" \
+    --payment-amount 500000000 \
+    --gas-price=1 \
+    --session-arg=cspr_to_burn:"u32='9'"
+```
+
+#### Check if account is an admin
+
+##### Using ```casper-client```
+
+The URL string get be received by querying the ```account-info-admins``` dictionary key named as the corresponding account hash, which can be accessed by URef with the same name stored under the contract named keys.
+
+###### Get the ```account-info-contract-url``` dictionary URef
+
+```bash
+ACCOUNT_INFO_ADMINS_DICT_UREF=$(casper-client query-state \
+  --node-address http://$NODE_ADDRESS:7777 \
+  --state-root-hash "$STATE_ROOT_HASH" \
+  --key "hash-$ACCOUNT_INFO_CONTRACT_HASH" \
+| jq -rc '.result | .stored_value | .Contract | .named_keys | map(select(.name | contains("account-info-admins"))) | .[] .key')
+```
+
+###### Query the dictionary
+
+```bash
+PUBLIC_KEY=<the public key of the account you want to check>
+
+casper-client get-dictionary-item \
+  --node-address http://$NODE_ADDRESS:7777 \
+  --state-root-hash "$STATE_ROOT_HASH" \
+  --seed-uref  "$ACCOUNT_INFO_ADMINS_DICT_UREF" \
+  --dictionary-item-key "$(casper-client account-address -p $PUBLIC_KEY | sed -r 's/account-hash-//g')"
+```
+
+##### Using the ```tools/is-admin.sh``` script
+
+```bash
+./is-admin.sh --node-address=$NODE_ADDRESS --contract-hash=$ACCOUNT_INFO_CONTRACT_HASH --public_key=$PUBLIC_KEY
+```
+
+#### Get the amount of CSPR that should be burned on the first ```set_url``` call
+
+##### Using ```casper-client```
+
+The URL string get be received by querying the ```cspr_to_burn``` value, which can be accessed by URef with the same name stored under the contract named keys.
+
+###### Get the ```account-info-contract-url``` dictionary URef
+
+```bash
+CSPR_TO_BURN_VALUE_UREF=$(casper-client query-state \
+  --node-address http://$NODE_ADDRESS:7777 \
+  --state-root-hash "$STATE_ROOT_HASH" \
+  --key "hash-$ACCOUNT_INFO_CONTRACT_HASH" \
+| jq -rc '.result | .stored_value | .Contract | .named_keys | map(select(.name | contains("cspr_to_burn"))) | .[] .key')
+```
+
+###### Query the network
+
+```bash
+STATE_ROOT_HASH=$(casper-client get-state-root-hash --node-address http://$NODE_ADDRESS:7777 | jq -r '.result | .state_root_hash')
+
+casper-client query-state --node-address http://$NODE_ADDRESS:7777 --key "$CSPR_TO_BURN_VALUE_UREF" --state-root-hash "$STATE_ROOT_HASH" | jq -r '.result | .stored_value'
+```
+
+##### Using the ```tools/get-cspr-to-burn-value.sh``` script
+
+```bash
+./get-cspr-to-burn-value.sh --node-address=$NODE_ADDRESS --contract-hash=$ACCOUNT_INFO_CONTRACT_HASH
+```
+
+## Contract deployment
+
+See Casper documentation about [Deploying Contracts](https://docs.casperlabs.io/en/latest/dapp-dev-guide/deploying-contracts.html) and [Contracts on the Blockchain](https://docs.casperlabs.io/en/latest/dapp-dev-guide/calling-contracts.html).
+
+After the contract is deployed, the contract owner account will be assigned as the first admin and will have the following named keys added:
+
+Named key | Description
+--------- | ------------
+```account-info-latest-version-contract``` | The hash of the latest version of the contract
+```account-info-latest-version-contract-hash``` | A URef to the value that stores the hash of the latest version of the contract
+```account-info-package``` | The contract package hash
+```account-info-package-hash``` | A URef to the value that stores the contract package hash
+```account-info-admins``` | Seed URef to the dictionary that stores contract admins
+```account-info-urls``` | Seed URef to the dictionary that stores account information URLs
+
+## Contract API
+
+The contract has two sets of entry points:
+- public entry points, which should be used by Casper account owners to provide information about themselves
+- admin entry points, which should be used by the contract administrators
+
+### Public entry points
+
+#### set_url
+
+Sets a domain URL under which the account information file should be stored for the contract caller. Note, that only the dop level domain without the ```.well-known/casper/account-info.<NETWORK_NAME>.json``` part should be provided
+
+Arguments:
+
+Name | Type | Description
+---- | ---- | -----------
+```url``` | ```String``` | Top level domain URL under which the account information file is stored
+
+#### get_url
+
+Returns the top level domain URL under which the account information file is stored for the given public key
+
+Arguments:
+
+Name | Type | Description
+---- | ---- | -----------
+```account``` | ```AccountHash``` | The account hash of the account the account information URL is requested for
+
+#### delete_url
+
+Deletes the top level domain URL under which the account information standard file is stored for the contract caller
+
+Arguments: this entry point has no arguments 
+
+### Admin entry points
+
+The entry points below are available only to the accounts defined as admins.
+
+#### set_url_for_account
+
+Sets a URL to the account information standard file for the provided account. 
+
+Arguments:
+
+Name | Type | Description
+---- | ---- | -----------
+```url``` | ```String``` | Top level domain URL under which the account information file is stored
+```account``` | ```AccountHash``` | The account has of the account, the information standard file URL should be set for
+
+#### delete_url_for_account
+
+Deletes the account information standard file URL from the provided account.
+
+Arguments: 
+
+Name | Type | Description
+---- | ---- | -----------
+```account``` | ```AccountHash``` | The account has of the account, the information standard file URL should be deleted from
+
+#### add_admin
+
+Add another admin account. Fails if the account already added as an admin.
+
+Arguments: 
+
+Name | Type | Description
+---- | ---- | -----------
+```account``` | ```AccountHash``` | The account hash of the new admin account.
+
+#### disable_admin
+
+Disabled existing admin account. Fails if the account is not an admin or if there is only one admin account left.
+
+Arguments: 
+
+Name | Type | Description
+---- | ---- | -----------
+```account``` | ```AccountHash``` | The account of the existing admin account, that should be disabled
+
+#### set_cspr_to_burn
+
+Sets amount of CSPR that should be burned during the ```set_url``` entry point execution, increasing the execution price
+
+Arguments:
+
+Name | Type | Description
+---- | ---- | -----------
+```cspr_to_burn``` | ```U32``` | The account CSPR that should be burned during the ```set_url``` entry point execution
+
+## Development
+
+### Setup
 
 ```bash
 make prepare
 ```
 
-## Build Smart Contract
+### Build
 
 ```bash
 make build-contract
@@ -19,88 +393,8 @@ The WASM file will be available in the target directory:
 target/wasm32-unknown-unknown/release/account-info.wasm
 ```
 
-## Test
+### Test
 
 ```bash
 make test
 ```
-
-## Deploy
-
-See Casper documentation about [Deploying Contracts](https://docs.casperlabs.io/en/latest/dapp-dev-guide/deploying-contracts.html) and [Contracts on the Blockchain](https://docs.casperlabs.io/en/latest/dapp-dev-guide/calling-contracts.html).
-
-After it's deployed, the account that deployed the contract is assigned as an admin.
-
-## Contract entry points
-
-### get_url
-
-Returns a URL to the account information standard file for the given public key
-
-Arguments:
-
-Name | Type | Description
----- | ---- | -----------
-```public_key``` | ```PublicKey``` | The public key of the account, which information standard file URL is requested
-
-### set_url
-
-Sets a URL to the account information standard file for the contract caller 
-
-Arguments:
-
-Name | Type | Description
----- | ---- | -----------
-```url``` | ```String``` | A URL to the account information standard file
-
-### delete_url
-
-Deletes contract caller's URL to the account information standard file
-
-Arguments: this entry point has no arguments 
-
-### set_url_for_account
-
-Sets a URL to the account information standard file for the provided account. This entry point is available only to the accounts defined as admins.
-
-Arguments:
-
-Name | Type | Description
----- | ---- | -----------
-```url``` | ```String``` | A URL to the account information standard file
-```public_key``` | ```PublicKey``` | The public key of the account, the information standard file URL should be set for
-
-### delete_url_for_account
-
-Deletes the account information standard file URL from the provided account. This entry point is available only to the accounts defined as admins.
-
-Arguments: 
-
-Name | Type | Description
----- | ---- | -----------
-```public_key``` | ```PublicKey``` | The public key of the account, the URL should be deleted from
-
-### add_admin
-
-Add another admin account.
-If fails if the account already exists.
-This entry point is available only to the accounts defined as admins.
-
-Arguments: 
-
-Name | Type | Description
----- | ---- | -----------
-```public_key``` | ```PublicKey``` | The public key of the new admin account.
-
-### remove_admin
-
-Remove existing admin account.
-If fails if the account is not an admin.
-If fails if there's only one admin account.
-This entry point is available only to the accounts defined as admins.
-
-Arguments: 
-
-Name | Type | Description
----- | ---- | -----------
-```public_key``` | ```PublicKey``` | The public key of the existing admin account.
