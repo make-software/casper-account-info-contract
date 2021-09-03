@@ -2,6 +2,41 @@
 
 Casper Account Info Contract allows account owners to provide information about themselves to the public by specifying a URL to a [Casper Account Info Standard](https://github.com/make-software/casper-account-info-standard) file.   
 
+## Table of contents
+
+- [Interacting with the contract](#interacting-with-the-contract)
+  - [As Casper account owner](#as-casper-account-owner)
+    - [Set URL for your account](#set-url-for-your-account)
+    - [Delete the URL previously set for your account](#delete-the-url-previously-set-for-your-account)
+    - [Get the URL set for an account](#get-the-url-set-for-an-account)
+      - [Using the ```tools/get-account-info-url.sh``` and ```tools/get-account-info.sh``` scripts](#using-the-toolsget-account-info-urlsh-and-toolsget-account-infosh-scripts)
+  - [As the contract admin](#as-the-contract-admin)
+    - [Set URL for account](#set-url-for-account)
+    - [Delete URL for account](#delete-url-for-account)
+    - [Add account as an admin](#add-account-as-an-admin)
+    - [Disable admin account](#disable-admin-account)
+    - [Set amount of CSPR to burn during the first ```set_url``` call](#set-amount-of-cspr-to-burn-during-the-first-set_url-call)
+    - [Check if account is an admin](#check-if-account-is-an-admin)
+        - [Using the ```tools/is-admin.sh``` script](#using-the-toolsis-adminsh-script)
+    - [Get the amount of CSPR that should be burned on the first ```set_url``` call](#get-the-amount-of-cspr-that-should-be-burned-on-the-first-set_url-call)
+        - [Using the ```tools/get-cspr-to-burn-value.sh``` script](#using-the-toolsget-cspr-to-burn-valuesh-script)
+- [Contract deployment](#contract-deployment)
+- [Contract API](#contract-api)
+  - [Public entry points](#public-entry-points)
+    - [set_url](#set_url)
+    - [get_url](#get_url)
+    - [delete_url](#delete_url)
+  - [Admin entry points](#admin-entry-points)
+    - [set_url_for_account](#set_url_for_account)
+    - [delete_url_for_account](#delete_url_for_account)
+    - [add_admin](#add_admin)
+    - [disable_admin](#disable_admin)
+    - [set_cspr_to_burn](#set_cspr_to_burn)
+  - [Development](#development)
+    - [Setup](#setup)
+    - [Build](#build)
+    - [Test](#test)
+
 ## Interacting with the contract
 
 You need to have ```casper-client``` and ```jq``` installed on your system to run the examples. The commands below were tested on Ubuntu 20.04.2 LTS.
