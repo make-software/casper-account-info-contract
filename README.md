@@ -41,6 +41,14 @@ Casper Account Info Contract allows account owners to provide information about 
 
 You need to have ```casper-client``` and ```jq``` installed on your system to run the examples. The commands below were tested on Ubuntu 20.04.2 LTS.
 
+### Known contract hashes
+
+To interact with the contract you need to call it by its hash. The table below contains known contract hashes (without the ```hash-``` prefix) on public Casper networks:
+
+Network | Account info contract hash | Contract owner
+---|---|---
+Testnet | ```2f36a35edcbaabe17aba805e3fae42699a2bb80c2e0c15189756fdc4895356f8``` | Make Software
+
 ### As Casper account owner
 
 Please set the following environment variables, which are reused across the examples:
@@ -52,7 +60,7 @@ ACCOUNT_KEYS_PATH=/etc/casper/validator_keys
 ACCOUNT_INFO_CONTRACT_HASH=2f36a35edcbaabe17aba805e3fae42699a2bb80c2e0c15189756fdc4895356f8
 ```
 
-The values provided above assume that you are running commands on your validator node.
+The values provided above assume that you are running commands on your Testnet validator node.
 
 #### Set URL for your account
 
@@ -146,7 +154,7 @@ CONTRACT_OWNER_KEYS_PATH=/etc/casper/validator_keys
 ACCOUNT_INFO_CONTRACT_HASH=2f36a35edcbaabe17aba805e3fae42699a2bb80c2e0c15189756fdc4895356f8
 ```
 
-The values provided above assume that you are running commands on your node instance.
+The values provided above assume that you are running commands on your Testnet node.
 
 #### Set URL for account
 
