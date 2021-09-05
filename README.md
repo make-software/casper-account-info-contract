@@ -5,6 +5,7 @@ Casper Account Info Contract allows account owners to provide information about 
 ## Table of contents
 
 - [Interacting with the contract](#interacting-with-the-contract)
+  - [Known contract hashes](#known-contract-hashes)
   - [As Casper account owner](#as-casper-account-owner)
     - [Set URL for your account](#set-url-for-your-account)
     - [Delete the URL previously set for your account](#delete-the-url-previously-set-for-your-account)
