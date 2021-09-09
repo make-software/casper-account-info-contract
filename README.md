@@ -40,7 +40,28 @@ Casper Account Info Contract allows account owners to provide information about 
 
 ## Interacting with the contract
 
-You need to have ```casper-client``` and ```jq``` installed on your system to run the examples. The commands below were tested on Ubuntu 20.04.2 LTS.
+You need to have ```casper-client``` and ```jq``` installed on your system to run the examples. The instructions have been tested on Ubuntu 20.04.2 LTS.
+
+### Install the prerequisites
+
+You can install the required software by issuing the following commands. If you are on an up-to-date Casper node, you probably already have all of the prerequisites installed so you can skip this step.
+
+```bash
+# Update package repositories
+sudo apt update
+
+# Install the command-line JSON processor
+sudo apt install jq -y
+
+# Add Casper repository
+echo "deb https://repo.casperlabs.io/releases" bionic main | sudo tee -a /etc/apt/sources.list.d/casper.list
+curl -O https://repo.casperlabs.io/casper-repo-pubkey.asc
+sudo apt-key add casper-repo-pubkey.asc
+sudo apt update
+
+# Install the Casper client software
+sudo apt install casper-client -y
+```
 
 ### Known contract hashes
 
