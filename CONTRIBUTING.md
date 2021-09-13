@@ -5,9 +5,9 @@ The following is a set of rules and guidelines for contributing to this repo. Pl
 ## Submitting issues
 
 If you have questions about how to use Casper Account Info Contract, please direct these to the related discord channels:
-* [#validators-general](https://discord.gg/S398hSJS)
-* [#node-tech-support](https://discord.gg/8urw83VN)
-* [#casperdotlive](https://discord.gg/eW8yfJvu)
+* [#validators-general](https://discord.gg/9CTHRvvA4d)
+* [#node-tech-support](https://discord.gg/9CTHRvvA4d)
+* [#casperdotlive](https://discord.gg/9CTHRvvA4d)
 
 ### Guidelines
 * Please search the existing issues first, it's likely that your issue was already reported or even fixed.
