@@ -65,11 +65,12 @@ sudo apt install casper-client -y
 
 ### Known contract hashes
 
-To interact with the contract you need to call it by its hash. The table below contains known contract hashes (without the ```hash-``` prefix) on public Casper networks:
+To interact with the contract you need to call it by its hash. The table below contains the known contract hashes (without the ```hash-``` prefix) on public Casper networks:
 
 Network | Account info contract hash | Contract owner
 ---|---|---
 Testnet | ```2f36a35edcbaabe17aba805e3fae42699a2bb80c2e0c15189756fdc4895356f8``` | Make Software
+Mainnet | ```fb8e0215c040691e9bbe945dd22a00989b532b9c2521582538edb95b61156698``` | Casper Association
 
 ### As Casper account owner
 
@@ -82,7 +83,7 @@ ACCOUNT_KEYS_PATH=/etc/casper/validator_keys
 ACCOUNT_INFO_CONTRACT_HASH=2f36a35edcbaabe17aba805e3fae42699a2bb80c2e0c15189756fdc4895356f8
 ```
 
-The values provided above assume that you are running commands on your Testnet validator node.
+The values provided above assume that you are running commands on your Testnet validator node. If you are on your Mainnet validator node, please adjust the value of the `ACCOUNT_INFO_CONTRACT_HASH` to match the Mainnet contract.
 
 #### Set URL for your account
 
@@ -121,7 +122,7 @@ sudo -u casper casper-client put-deploy \
 
 ##### Using ```casper-client```
 
-The URL string get be received by querying the ```account-info-urls``` dictionary key named as the corresponding account hash, which can be accessed by URef with the same name stored under the contract named keys.
+The URL string can be received by querying the ```account-info-urls``` dictionary key named as the corresponding account hash, which can be accessed by URef with the same name stored under the contract named keys.
 
 ###### Get the ```account-info-contract-url``` dictionary URef
 
@@ -275,7 +276,7 @@ casper-client put-deploy \
 
 ##### Using ```casper-client```
 
-The URL string get be received by querying the ```account-info-admins``` dictionary key named as the corresponding account hash, which can be accessed by URef with the same name stored under the contract named keys.
+The URL string can be received by querying the ```account-info-admins``` dictionary key named as the corresponding account hash, which can be accessed by URef with the same name stored under the contract named keys.
 
 ###### Get the ```account-info-contract-url``` dictionary URef
 
@@ -309,7 +310,7 @@ casper-client get-dictionary-item \
 
 ##### Using ```casper-client```
 
-The URL string get be received by querying the ```cspr_to_burn``` value, which can be accessed by URef with the same name stored under the contract named keys.
+The URL string can be received by querying the ```cspr_to_burn``` value, which can be accessed by URef with the same name stored under the contract named keys.
 
 ###### Get the ```account-info-contract-url``` dictionary URef
 
@@ -360,7 +361,7 @@ The contract has two sets of entry points:
 
 #### set_url
 
-Sets a domain URL under which the account information file should be stored for the contract caller. Note, that only the dop level domain without the ```.well-known/casper/account-info.<NETWORK_NAME>.json``` part should be provided
+Sets a domain URL under which the account information file should be stored for the contract caller. Note, that only the top level domain without the ```.well-known/casper/account-info.<NETWORK_NAME>.json``` part should be provided
 
 Arguments:
 
@@ -421,7 +422,7 @@ Name | Type | Description
 
 #### disable_admin
 
-Disabled existing admin account. Fails if the account is not an admin or if there is only one admin account left.
+Disables existing admin account. Fails if the account is not an admin or if there is only one admin account left.
 
 Arguments: 
 
