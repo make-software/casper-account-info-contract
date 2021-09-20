@@ -124,6 +124,12 @@ sudo -u casper casper-client put-deploy \
 
 The URL string can be received by querying the ```account-info-urls``` dictionary key named as the corresponding account hash, which can be accessed by URef with the same name stored under the contract named keys.
 
+###### Get the ```STATE_ROOT_HASH``` value
+
+```bash
+STATE_ROOT_HASH=$(casper-client get-state-root-hash --node-address http://$NODE_ADDRESS:7777 | jq -r '.result | .state_root_hash')
+```
+
 ###### Get the ```account-info-contract-url``` dictionary URef
 
 ```bash
