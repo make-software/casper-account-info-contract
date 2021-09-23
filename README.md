@@ -157,19 +157,19 @@ casper-client get-dictionary-item \
 ###### Get the URL
 
 ```bash
-./get-account-info-url.sh --node-address=$NODE_ADDRESS --contract-hash=$ACCOUNT_INFO_CONTRACT_HASH --public_key=$PUBLIC_KEY
+./get-account-info-url.sh --node-address=$NODE_ADDRESS --contract-hash=$ACCOUNT_INFO_CONTRACT_HASH --public-key=$PUBLIC_KEY
 ```
 
 ###### Get the account information file content
 
 ```bash
-./get-account-info.sh --node-address=$NODE_ADDRESS --contract-hash=$ACCOUNT_INFO_CONTRACT_HASH --public_key=$PUBLIC_KEY
+./get-account-info.sh --node-address=$NODE_ADDRESS --contract-hash=$ACCOUNT_INFO_CONTRACT_HASH --public-key=$PUBLIC_KEY
 ```
 
 You can query the specific fields with ```jq```. The command below print the public key owner name:
 
 ```bash
-./get-account-info.sh --node-address=$NODE_ADDRESS --contract-hash=$ACCOUNT_INFO_CONTRACT_HASH --public_key=$PUBLIC_KEY | jq -r '.owner | .name'
+./get-account-info.sh --node-address=$NODE_ADDRESS --contract-hash=$ACCOUNT_INFO_CONTRACT_HASH --public-key=$PUBLIC_KEY | jq -r '.owner | .name'
 ```
 
 ### As the contract admin 
@@ -309,7 +309,7 @@ casper-client get-dictionary-item \
 ##### Using the ```tools/is-admin.sh``` script
 
 ```bash
-./is-admin.sh --node-address=$NODE_ADDRESS --contract-hash=$ACCOUNT_INFO_CONTRACT_HASH --public_key=$PUBLIC_KEY
+./is-admin.sh --node-address=$NODE_ADDRESS --contract-hash=$ACCOUNT_INFO_CONTRACT_HASH --public-key=$PUBLIC_KEY
 ```
 
 #### Get the amount of CSPR that should be burned on the first ```set_url``` call
