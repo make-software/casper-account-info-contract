@@ -62,13 +62,14 @@ ACCOUNT_INFO_URLS_DICT_UREF=$(casper-client query-state \
   --key "hash-$CONTRACT_HASH" \
 | jq -rc '.result | .stored_value | .Contract | .named_keys | map(select(.name | contains("account-info-urls"))) | .[] .key')
 
-ACCOUNT_HASH=$(casper-client account-address -p $PUBLIC_KEY | sed -r 's/account-hash-//g')
+ACCOUNT_HASH=$(casper-client account-address --public-key $PUBLIC_KEY | sed -r 's/account-hash-//g')
+ACCOUNT_HASH_LOWERCASED=${ACCOUNT_HASH,,}
 
 BASE_URL=$(casper-client get-dictionary-item \
   --node-address http://$NODE_ADDRESS:7777 \
   --state-root-hash "$STATE_ROOT_HASH" \
   --seed-uref  "$ACCOUNT_INFO_URLS_DICT_UREF" \
-  --dictionary-item-key "$ACCOUNT_HASH" \
+  --dictionary-item-key "$ACCOUNT_HASH_LOWERCASED" \
 | jq -r '.result | .stored_value | .CLValue | .parsed')
 
 CHAIN_NAME=$(curl -s http://$NODE_ADDRESS:8888/status | jq -r '.chainspec_name')
