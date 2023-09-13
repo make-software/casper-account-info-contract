@@ -99,7 +99,6 @@ sudo -u casper casper-client put-deploy \
     --session-hash "$ACCOUNT_INFO_CONTRACT_HASH" \
     --session-entry-point "set_url" \
     --payment-amount 10000000000 \
-    --gas-price=1 \
     --session-arg=url:"string='https://casper-account-info-example.make.services'"
 ```
 
@@ -114,8 +113,7 @@ sudo -u casper casper-client put-deploy \
     --secret-key "$ACCOUNT_KEYS_PATH/secret_key.pem" \
     --session-hash "$ACCOUNT_INFO_CONTRACT_HASH" \
     --session-entry-point "delete_url" \
-    --payment-amount 500000000 \
-    --gas-price=1
+    --payment-amount 500000000
 ```
 
 #### Get the URL set for an account
@@ -199,7 +197,6 @@ casper-client put-deploy \
     --session-hash "$ACCOUNT_INFO_CONTRACT_HASH" \
     --session-entry-point "set_url_for_account" \
     --payment-amount 500000000 \
-    --gas-price=1 \
     --session-arg=account:"account_hash='$(casper-client account-address -public-key $PUBLIC_KEY)'" \
     --session-arg=url:"string='https://casper-account-info-example.make.services'"
 ```
@@ -218,7 +215,6 @@ casper-client put-deploy \
     --session-hash "$ACCOUNT_INFO_CONTRACT_HASH" \
     --session-entry-point "delete_url_for_account" \
     --payment-amount 500000000 \
-    --gas-price=1 \
     --session-arg=account:"account_hash='$(casper-client account-address --public-key $PUBLIC_KEY)'"
 ```
 
@@ -236,7 +232,6 @@ casper-client put-deploy \
     --session-hash "$ACCOUNT_INFO_CONTRACT_HASH" \
     --session-entry-point "add_admin" \
     --payment-amount 500000000 \
-    --gas-price=1 \
     --session-arg=account:"account_hash='$(casper-client account-address --public-key $PUBLIC_KEY)'"
 ```
 
@@ -254,7 +249,6 @@ casper-client put-deploy \
     --session-hash "$ACCOUNT_INFO_CONTRACT_HASH" \
     --session-entry-point "disable_admin" \
     --payment-amount 500000000 \
-    --gas-price=1 \
     --session-arg=account:"account_hash='$(casper-client account-address -public-key $PUBLIC_KEY)'"
 ```
 
@@ -274,7 +268,6 @@ casper-client put-deploy \
     --session-hash "$ACCOUNT_INFO_CONTRACT_HASH" \
     --session-entry-point "set_cspr_to_burn" \
     --payment-amount 500000000 \
-    --gas-price=1 \
     --session-arg=cspr_to_burn:"u32='9'"
 ```
 
