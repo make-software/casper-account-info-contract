@@ -54,7 +54,7 @@ sudo apt update
 sudo apt install jq -y
 
 # Add Casper repository
-echo "deb https://repo.casperlabs.io/releases" bionic main | sudo tee -a /etc/apt/sources.list.d/casper.list
+echo "deb https://repo.casperlabs.io/releases" focal main | sudo tee -a /etc/apt/sources.list.d/casper.list
 curl -O https://repo.casperlabs.io/casper-repo-pubkey.asc
 sudo apt-key add casper-repo-pubkey.asc
 sudo apt update
