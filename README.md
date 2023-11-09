@@ -72,6 +72,11 @@ Network | Account info contract hash | Contract owner
 Testnet | ```2f36a35edcbaabe17aba805e3fae42699a2bb80c2e0c15189756fdc4895356f8``` | Make Software
 Mainnet | ```fb8e0215c040691e9bbe945dd22a00989b532b9c2521582538edb95b61156698``` | Casper Association
 
+Network | Json File Name |
+---|---|
+Testnet | ```account-info.casper-test.json``` |
+Mainnet | ```account-info.casper.json``` |
+
 ### As Casper account owner
 
 Please set the following environment variables, which are reused across the examples:
