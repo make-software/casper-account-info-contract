@@ -87,7 +87,7 @@ The values provided above assume that you are running commands on your Testnet v
 
 #### Set URL for your account
 
-> **Payment:** The ```set_url``` entry point call payment should be 10 CSPR. The deploy may fail with an "Out of gas" error if a smaller amount provided. For the consecutive ```set_url``` calls the advised payment amount is 0.5 CSPR
+> **Payment:** The ```set_url``` entry point call payment should be 15 CSPR. The deploy may fail with an "Out of gas" error if a smaller amount provided. For the consecutive ```set_url``` calls the advised payment amount is 0.5 CSPR
 
 The command below sets the top level domain URL for an account information file hosted at [https://casper-account-info-example.make.services/.well-known/casper/account-info.casper-test.json](https://casper-account-info-example.make.services/.well-known/casper/account-info.casper-test.json). (Please note that the url you provide here will be prominently displayed on the block explorers as your official website, and your account's public key must exist in the JSON data either in the nodes or affiliated accounts section for it to be successfully verified by CSPR.live and other dApps in the Casper ecosystem.)
 
@@ -98,7 +98,7 @@ sudo -u casper casper-client put-deploy \
     --secret-key "$ACCOUNT_KEYS_PATH/secret_key.pem" \
     --session-hash "$ACCOUNT_INFO_CONTRACT_HASH" \
     --session-entry-point "set_url" \
-    --payment-amount 10000000000 \
+    --payment-amount 15000000000 \
     --session-arg=url:"string='https://casper-account-info-example.make.services'"
 ```
 
