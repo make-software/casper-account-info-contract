@@ -152,7 +152,7 @@ casper-client get-dictionary-item \
   --node-address http://$NODE_ADDRESS:7777 \
   --state-root-hash "$STATE_ROOT_HASH" \
   --seed-uref  "$ACCOUNT_INFO_URLS_DICT_UREF" \
-  --dictionary-item-key "$(casper-client account-address -public-key $PUBLIC_KEY | sed -r 's/account-hash-//g')"
+  --dictionary-item-key "$(casper-client account-address --public-key $PUBLIC_KEY | sed -r 's/account-hash-//g')"
 ```
 
 ##### Using the ```tools/get-account-info-url.sh``` and ```tools/get-account-info.sh``` scripts
@@ -202,7 +202,7 @@ casper-client put-deploy \
     --session-hash "$ACCOUNT_INFO_CONTRACT_HASH" \
     --session-entry-point "set_url_for_account" \
     --payment-amount 500000000 \
-    --session-arg=account:"account_hash='$(casper-client account-address -public-key $PUBLIC_KEY)'" \
+    --session-arg=account:"account_hash='$(casper-client account-address --public-key $PUBLIC_KEY)'" \
     --session-arg=url:"string='https://casper-account-info-example.make.services'"
 ```
 
@@ -254,7 +254,7 @@ casper-client put-deploy \
     --session-hash "$ACCOUNT_INFO_CONTRACT_HASH" \
     --session-entry-point "disable_admin" \
     --payment-amount 500000000 \
-    --session-arg=account:"account_hash='$(casper-client account-address -public-key $PUBLIC_KEY)'"
+    --session-arg=account:"account_hash='$(casper-client account-address --public-key $PUBLIC_KEY)'"
 ```
 
 #### Set amount of CSPR to burn during the first ```set_url``` call
@@ -301,7 +301,7 @@ casper-client get-dictionary-item \
   --node-address http://$NODE_ADDRESS:7777 \
   --state-root-hash "$STATE_ROOT_HASH" \
   --seed-uref  "$ACCOUNT_INFO_ADMINS_DICT_UREF" \
-  --dictionary-item-key "$(casper-client account-address -public-key $PUBLIC_KEY | sed -r 's/account-hash-//g')"
+  --dictionary-item-key "$(casper-client account-address --public-key $PUBLIC_KEY | sed -r 's/account-hash-//g')"
 ```
 
 ##### Using the ```tools/is-admin.sh``` script
